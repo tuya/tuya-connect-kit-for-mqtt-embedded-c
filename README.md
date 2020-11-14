@@ -4,7 +4,7 @@ SDK不依赖具体设备平台及OS环境，仅需要支持TCP/IP协议栈及提
 
 
 ## 平台移植说明
-请参考 [SDK 接入移植指导](https://wiki.tuya-inc.com:7799/pages/viewpage.action?pageId=44729115)
+请参考 [SDK 接入移植指导](./PortingGuide.md)
 
 
 ## 快速开始
@@ -20,8 +20,7 @@ SDK不依赖具体设备平台及OS环境，仅需要支持TCP/IP协议栈及提
 授权信息是设备接入涂鸦云的凭证，由 UUID 和 AUTHKEY 组成，授权信息申请请参考 [授权码申请流程]()。
 
 ### SDK 下载
-~~git clone https://github.com/TuyaInc/tuya-iot-link-sdk-embedded-c.git --recurse-submodules
-（暂未上传github）
+git clone https://github.com/tuya/tuya-iot-link-sdk-embedded-c.git --recurse-submodules
 
 
 ### SDK 目录结构说明
@@ -37,7 +36,7 @@ SDK不依赖具体设备平台及OS环境，仅需要支持TCP/IP协议栈及提
 
 
 ### 配置设备信息
-将上文申请 Product ID 与授权信息写入 SDK *examples/linux/switch_demo/tuya_config.h* 
+将上文申请 Product ID 与授权信息写入 SDK *examples/switch_demo/tuya_config.h* 
 中定义的 **TUYA_PRODUCT_KEY**, **TUYA_DEVICE_UUID**, **TUYA_DEVICE_AUTHKEY** 完成基础信息配置。
 
 
