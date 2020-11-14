@@ -7,7 +7,6 @@
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Clone the repository](#clone-the-repository)
-  - [Configuration](#configuration)
   - [Compiling](#compiling)
   - [Run](#run)
 - [Usage example](#usage-example)
@@ -33,13 +32,6 @@ sudo apt-get install make cmake libqrencode-dev
 ### Clone the repository
 ```sh
 git clone https://github.com/tuya/tuya-iot-link-sdk-embedded-c.git --recurse-submodules
-```
-
-### Configuration
-
-Get a UUID AUTHEY PRODUCT KEY at [https://tuya.com](https://tuya.com) and replace Product ID, UUID, AUTHKEY at configuration file
-```sh
-nano examples/switch_demo/tuya_config.h
 ```
 
 ### Compiling
