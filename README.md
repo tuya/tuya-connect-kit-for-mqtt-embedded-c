@@ -1,5 +1,4 @@
 # Tuya IoT Link SDK for Embedded C
-<!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
 - [Tuya IoT Link SDK for Embedded C](#tuya-iot-link-sdk-for-embedded-c)
@@ -14,13 +13,12 @@
   - [License](#license)
 
 
-<!-- Introduction -->
 ## Introduction
 Tuya IoTOS Link SDK
 provide core capabilities like device connection, uplink and downlink communication and OTA across platforms and operating systems.
 The SDK is implemented in C language and does not depend on the specific device platform and OS environment. It only needs to support the TCP/IP protocol stack and provide the necessary system-dependent interfaces of the SDK to complete the integration.
 
-<!-- GETTING STARTED -->
+
 ## Getting Started
 
 ### Prerequisites
@@ -47,8 +45,6 @@ make
 ./bin/switch_demo
 ```
 
-
-<!-- USAGE EXAMPLES -->
 ## Usage example
 
 1. Initialize a client object tuya_iot_client_t client and initialize it, tuya_iot_config_t is to initialize PRODUCT ID, authorization information and other configuration parameters:
@@ -128,9 +124,6 @@ const char multiple_value[] = {"{\"101\":true,\"102\":123,\"103\":\"hellowrold\"
 tuya_iot_dp_report_json(&client, multiple_value);
 ```
 
-
-<!-- LICENSE -->
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-
