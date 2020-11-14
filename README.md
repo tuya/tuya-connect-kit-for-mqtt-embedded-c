@@ -9,7 +9,7 @@
     - [Prerequisites](#prerequisites)
     - [Clone the repository](#clone-the-repository)
     - [Compiling](#compiling)
-    - [Run](#run)
+    - [Run the demo](#run-the-demo)
   - [Usage example](#usage-example)
   - [License](#license)
 
@@ -42,7 +42,7 @@ cmake ..
 make
 ```
 
-### Run
+### Run the demo
 ```sh
 ./bin/switch_demo
 ```
