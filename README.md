@@ -1,16 +1,17 @@
-
+# Tuya IoT Link SDK for Embedded C
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
-- [Introduction](#introduction)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Clone the repository](#clone-the-repository)
-  - [Compiling](#compiling)
-  - [Run](#run)
-- [Usage example](#usage-example)
-- [License](#license)
+- [Tuya IoT Link SDK for Embedded C](#tuya-iot-link-sdk-for-embedded-c)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Clone the repository](#clone-the-repository)
+    - [Compiling](#compiling)
+    - [Run](#run)
+  - [Usage example](#usage-example)
+  - [License](#license)
 
 
 <!-- Introduction -->
