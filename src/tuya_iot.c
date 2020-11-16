@@ -14,8 +14,6 @@
 #include "atop_service.h"
 #include "cJSON.h"
 
-#define STORAGE_KEY_ACTIVATE        "activate.json"
-#define STORAGE_KEY_WIFICFG         "wificfg.json"
 #define ACTIVATE_MAXLEN             (255)
 #define SCHEMA_MAXLEN               (4096)
 #define TOKEN_LEN_MIN               (8)
@@ -95,7 +93,7 @@ static int activate_json_string_parse(const char* str, activated_params_t* out)
     return OPRT_OK;
 }
 
-static int activated_data_read(tuya_iot_client_t* client, char* filename)
+static int activated_data_read(const char* storage_key, activated_params_t* out)
 {
     int rt = OPRT_OK;
     size_t readlen = ACTIVATE_MAXLEN;
@@ -106,7 +104,7 @@ static int activated_data_read(tuya_iot_client_t* client, char* filename)
     }
 
     /* Try read activate config data */
-    rt = local_storage_get((const char*)filename, (uint8_t*)readbuf, &readlen);
+    rt = local_storage_get((const char*)storage_key, (uint8_t*)readbuf, &readlen);
     if (OPRT_OK != rt) {
         TY_LOGW("activate config not found:%d", rt);
         system_free(readbuf);
@@ -114,7 +112,7 @@ static int activated_data_read(tuya_iot_client_t* client, char* filename)
     }
 
     /* Parse activate json string */
-    rt = activate_json_string_parse((const char*)readbuf, &(client->activate));
+    rt = activate_json_string_parse((const char*)readbuf, out);
     system_free(readbuf);
     if (OPRT_OK != rt) {
         TY_LOGE("activate_json_string_parse fail:%d", rt);
@@ -129,7 +127,8 @@ static int run_state_startup(tuya_iot_client_t* client)
     int rt = OPRT_OK;
 
     /* loading activated info */
-    rt = activated_data_read(client, STORAGE_KEY_ACTIVATE);
+    const char* activate_data_key = client->uuid;
+    rt = activated_data_read(activate_data_key, &client->activate);
     if (OPRT_OK != rt) {
         TY_LOGW("activated data read fail:%d", rt);
         TY_LOGI("go reactivate..");
@@ -246,8 +245,7 @@ static int run_state_reset(tuya_iot_client_t* client)
     tuya_mqtt_stop(&client->mqctx);
 
     local_storage_del((const char*)(client->activate.schemaId));
-    local_storage_del(STORAGE_KEY_ACTIVATE);
-    local_storage_del(STORAGE_KEY_WIFICFG);
+    local_storage_del((const char*)(client->uuid));
 
     client->state = STATE_RESTART;
     return OPRT_OK;
@@ -447,8 +445,9 @@ static void token_activate_response_parse(atop_base_response_t* response)
 
     // activate info save
     char* result_string = cJSON_PrintUnformatted(result_root);
-    TY_LOGI("result len %d :%s", (int)strlen(result_string), result_string);
-    ret = local_storage_set(STORAGE_KEY_ACTIVATE, (const uint8_t*)result_string, strlen(result_string));
+    const char* activate_data_key = client->uuid;
+    TY_LOGD("result len %d :%s", (int)strlen(result_string), result_string);
+    ret = local_storage_set(activate_data_key, (const uint8_t*)result_string, strlen(result_string));
     system_free(result_string);
     if (ret != OPRT_OK) {
         TY_LOGE("activate data save error:%d", ret);
