@@ -21,6 +21,7 @@
 #define HEADER_BUFFER_LENGTH (512)
 #define DEFAULT_HTTP_TIMEOUT (5000)
 #define DEFAULT_RESPONSE_BUFFER_LEN (1024)
+#define AES_BLOCK_SIZE (16)
 
 #define ATOP_COMMON_HEADER "application/x-www-form-urlencoded;charset=UTF-8"
 
@@ -96,23 +97,34 @@ static int atop_request_data_encode(const char* key,
 	int printlen = 0;
     int i;
 
-	// AES encrypt
-	uint8_t* buffer = NULL;
-	size_t encrypted_len = 0;
-    rt = aes128_ecb_encode((const uint8_t*)input, ilen, &buffer, (uint32_t*)&encrypted_len, (const uint8_t*)key);
-	if (rt != 0) {
-		TY_LOGE("mbedtls_cipher_encrypt error: %d", rt);
-        system_free(buffer);
-		return rt;
-	}
+	/* AES data PKCS7 padding */
+    uint8_t padding_value = AES_BLOCK_SIZE - ilen % AES_BLOCK_SIZE;
+    size_t input_buffer_len = ilen + padding_value;
+    uint8_t* input_buffer = system_malloc(input_buffer_len);
+    memcpy(input_buffer, input, ilen);
+    for(i = 0; i < padding_value; i++) {
+        input_buffer[ilen + i] = padding_value;
+    }
+
+    /* AES128-ECB encode */
+	uint8_t* encrypted_buffer = system_malloc(input_buffer_len);
+	size_t encrypted_len = input_buffer_len;
+
+    OPERATE_RET ret = aes128_ecb_encode_raw(input_buffer, input_buffer_len, encrypted_buffer, (const uint8_t*)key);
+    system_free(input_buffer);
+    if(ret != OPRT_OK) {
+        system_free(encrypted_buffer);
+        return ret;
+    }
 
 	// output the hex data
 	printlen = sprintf((char*)output, "%s", "data=");
 	for (i = 0; i < (int)encrypted_len; i++) {
-		printlen += sprintf((char*)output + printlen, "%02X", (uint8_t)(buffer[i]));
+		printlen += sprintf((char*)output + printlen, "%02X", (uint8_t)(encrypted_buffer[i]));
 	}
+
+    system_free(encrypted_buffer);
 	*olen = printlen;
-    system_free(buffer);
 	return 0;
 }
 
@@ -172,7 +184,7 @@ static int atop_response_data_decode(const char* key,
     size_t b64buffer_olen = 0;
 
     // base64 decode
-    rt = mbedtls_base64_decode(b64buffer, b64buffer_len, &b64buffer_olen, value, value_length);
+    rt = mbedtls_base64_decode(b64buffer, b64buffer_len, &b64buffer_olen, (const uint8_t*)value, value_length);
     if (rt != OPRT_OK) {
         TY_LOGE("base64 decode error:%d", rt);
         system_free(b64buffer);
@@ -193,8 +205,17 @@ static int atop_response_data_decode(const char* key,
 static int atop_response_result_parse_cjson(const uint8_t* input, size_t ilen, 
                                             atop_base_response_t* response)
 {
+    if (NULL == input || NULL == response) {
+        TY_LOGE("param error");
+        return OPRT_INVALID_PARM;
+    }
+
+    if (input[ilen] != '\0') {
+        TY_LOGE("string length error ilen:%d, stlen:%d", ilen, strlen((char*)input));
+    }
+
     // json parse
-    cJSON* root = cJSON_ParseWithLength((const char*)input, ilen);
+    cJSON* root = cJSON_Parse((const char*)input);
     if (NULL == root) {
         TY_LOGE("Json parse error");
         return OPRT_CJSON_PARSE_ERR;
@@ -213,7 +234,7 @@ static int atop_response_result_parse_cjson(const uint8_t* input, size_t ilen,
     }
     
     // if 'success == True', copy the json object to result point
-    if (cJSON_IsTrue(cJSON_GetObjectItem(root, "success"))) {
+    if (cJSON_GetObjectItem(root, "success")->type == cJSON_True) {
         response->success = true;
         response->result = cJSON_DetachItemFromObject(root, "result");
     } else {
@@ -368,13 +389,12 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
         system_free(path_buffer);
         return rt;
     }
-    TY_LOGD("url params len:%d: %s", encode_len, path_buffer + path_buffer_len);
     path_buffer_len += encode_len;
     TY_LOGD("request url len:%d: %s", path_buffer_len, path_buffer);
 
     /* POST data buffer */
     size_t body_length = 0;
-    uint8_t* body_buffer = system_malloc(POST_DATA_PREFIX + request->datalen * 2 + 1);
+    uint8_t* body_buffer = system_malloc(POST_DATA_PREFIX + (request->datalen + AES_BLOCK_SIZE) * 2 + 1);
     if (NULL == body_buffer) {
         TY_LOGE("body_buffer malloc fail");
         system_free(path_buffer);
@@ -382,6 +402,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     }
 
     /* POST data encode */
+    TY_LOGD("atop_request_data_encode");
     rt = atop_request_data_encode((char*)request->key, request->data, request->datalen, body_buffer, &body_length);
 	if (rt != OPRT_OK) {
         TY_LOGE("atop_post_data_encrypt error:%d", rt);
@@ -389,7 +410,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
         system_free(body_buffer);
 		return rt;
     }
-    TY_LOGV("out post data: %s", body_buffer);
+    TY_LOGV("out post data len:%d, data:%s", body_length, body_buffer);
 
     /* TLS pre init */
     NetworkContext_t network;
@@ -479,7 +500,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     }
 
     size_t result_buffer_length = 0;
-    uint8_t* result_buffer = system_malloc(http_response.bodyLen);
+    uint8_t* result_buffer = system_calloc(1, http_response.bodyLen);
     if (NULL == result_buffer) {
         TY_LOGE("result_buffer malloc fail");
         return OPRT_MALLOC_FAILED;

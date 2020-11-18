@@ -142,12 +142,13 @@ static void mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* payl
 		system_free(jsonstr);
 		return;
 	}
+	jsonstr[jsonstr_len] = '\0';
 	TY_LOGD("MQTT recv len:%d, output:%s", (int)jsonstr_len, jsonstr);
 	
 	// json parse
 	cJSON *root = NULL;
     cJSON *json = NULL;
-    root = cJSON_ParseWithLength((const char *)jsonstr, jsonstr_len);
+    root = cJSON_Parse((const char *)jsonstr);
 	system_free(jsonstr);
     if(NULL == root) {
         TY_LOGE("JSON parse error");
@@ -319,7 +320,7 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 	}
 
 	/* TLS pre init */
-	rt = iot_tls_init(&context->network, (char*)config->rootCA, NULL, NULL,
+	rt = iot_tls_init(&context->network, config->rootCA, NULL, NULL,
 						config->host, config->port, config->timeout, true);
 	if (OPRT_OK != rt) {
 		TY_LOGE("iot_tls_init fail:%d", rt);
@@ -565,7 +566,7 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 				CONNACK_RECV_TIMEOUT_MS, 
 				&pSessionPresent );
 			if (MQTTSuccess != mqttStatus) {
-				TY_LOGE("mqtt connect err: %d", rt);
+				TY_LOGE("mqtt connect err: %d", mqttStatus);
 				tuya_mqtt_reconnect(context);
 				break;
 			}

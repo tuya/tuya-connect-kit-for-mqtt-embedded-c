@@ -11,7 +11,6 @@ extern "C" {
 
 #include "tuya_cloud_types.h"
 #include "tuya_error_code.h"
-#include "tuya_log.h"
 
 #include "mqtt_service.h"
 #include "atop_service.h"
