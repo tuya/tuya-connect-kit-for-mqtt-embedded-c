@@ -54,10 +54,11 @@ tuya_iot_client_t client;
 
 /* instantiate the config */
 tuya_iot_config_t config = {
+    .software_ver = "1.0.0",
     .productkey = <Product ID>,
     .uuid = <UUID>,
     .authkey = <AUTHKEY>,
-    .event_handler = user_event_handler_cb
+    .event_handler = user_event_handler_on
 };
 
 /* initialize the client */
