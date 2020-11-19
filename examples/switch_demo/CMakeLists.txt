@@ -11,7 +11,6 @@ target_link_libraries(
     ${DEMO_NAME}
     PUBLIC
         link_core
-        platform_port
         qrencode
 )
 

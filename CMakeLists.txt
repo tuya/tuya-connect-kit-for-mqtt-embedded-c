@@ -9,10 +9,14 @@ set_property( GLOBAL PROPERTY USE_FOLDERS ON )
 
 # Use C90.
 set( CMAKE_C_STANDARD 90 )
-set( CMAKE_C_STANDARD_REQUIRED ON )                   
+set( CMAKE_C_STANDARD_REQUIRED ON )
 
 # For debug
 add_compile_options( -g )
+
+# Set Compiler
+# set(CMAKE_C_COMPILER arm-linux-androideabi-gcc)
+# set(CMAKE_CXX_COMPILER arm-linux-androideabi-g++)
 
 # Do not allow in-source build.
 if( ${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR} )
@@ -81,6 +85,7 @@ message(STATUS " .. CMake version ............... = ${CMAKE_VERSION}"         )
 message(STATUS " .. System name ................. = ${CMAKE_SYSTEM}"          )
 message(STATUS " .. C++ compiler ................ = ${CMAKE_CXX_COMPILER}"    )
 message(STATUS " .. C compiler .................. = ${CMAKE_C_COMPILER}"      )
+message(STATUS " .. C FLAGS ..................... = ${CMAKE_C_FLAGS}"         )
 message(STATUS " .. size(void*) ................. = ${CMAKE_SIZEOF_VOID_P}"   )
 message(STATUS " Project configuration:"                                      )
 message(STATUS " .. Build test programs  ........ = ${WITH_TESTS}"            )

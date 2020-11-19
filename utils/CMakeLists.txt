@@ -2,7 +2,7 @@
 FILE(GLOB UTILS_SOURCES *.c)
 
 # Add a library with the above sources
-add_library( utils_modules
+add_library( utils_modules STATIC
     ${UTILS_SOURCES}
 )
 

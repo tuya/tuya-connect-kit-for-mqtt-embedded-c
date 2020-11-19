@@ -5,7 +5,7 @@ include( ${LIBRARIES_DIR}/coreMQTT/mqttFilePaths.cmake )
 include( ${LINKSDK_DIRS}/tuyaFilePaths.cmake )
 
 # Add a library with the above sources
-add_library( link_core
+add_library( link_core STATIC
     ${LINK_SDK_SOURCES}
     ${MQTT_SOURCES}
     ${MQTT_SERIALIZER_SOURCES}
@@ -24,7 +24,7 @@ target_include_directories( link_core
     ${CMAKE_CURRENT_LIST_DIR}
 )
 
-target_link_libraries(
-    link_core 
+target_link_libraries( link_core
     utils_modules
+    platform_port
 )
