@@ -19,7 +19,7 @@
 #define TOKEN_LEN_MIN               (8)
 #define MQTT_NETCFG_TIMEOUT         (5000)
 #define MQTT_RECV_TIMEOUT           (2000)
-#define MAX_LENGTH_ACTIVATE_BUFFER  (1024*6)
+#define MAX_LENGTH_ACTIVATE_BUFFER  (1024*8)
 
 extern const char tuya_rootCA_pem[];
 static int run_state_netcfg_mode(tuya_iot_client_t* client);
@@ -156,17 +156,22 @@ static void mqtt_dp_receive_on(tuya_mqtt_event_t* ev)
         return;
     }
 
-    // get dps string json
+    /* Get dps string json */
     char* dps_string = cJSON_PrintUnformatted(cJSON_GetObjectItem(data, "dps"));
 	TY_LOGV("dps: \r\n%s", dps_string);
 
-    /* DP event send */
+    /* Send DP string format event*/
     client->event.id = TUYA_EVENT_DP_RECEIVE;
     client->event.data = dps_string;
     client->event.length = strlen(dps_string);
-    client->event.json_dps = cJSON_GetObjectItem(data, "dps");
     iot_dispatch_event(client);
     system_free(dps_string);
+
+    /* Send DP cJSON format event*/
+    client->event.id = TUYA_EVENT_DP_RECEIVE_CJSON;
+    client->event.data = cJSON_GetObjectItem(data, "dps");
+    client->event.length = 0;
+    iot_dispatch_event(client);
 }
 
 static void mqtt_reset_cmd_on(tuya_mqtt_event_t* ev)
