@@ -205,7 +205,7 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
     rt = tuya_mqtt_init(&client->mqctx, &(const tuya_mqtt_config_t){
         .rootCA = tuya_rootCA_pem,
         .host = tuya_mqtt_server_host_get(),
-        .port = TUYA_MQTT_PORT,
+        .port = tuya_mqtt_server_port_get(),
         .devid = client->activate.devid,
         .seckey = client->activate.seckey,
         .localkey = client->activate.localkey,
@@ -302,6 +302,15 @@ int tuya_iot_stop(tuya_iot_client_t *client)
 int tuya_iot_reset(tuya_iot_client_t *client)
 {
     int ret = OPRT_OK;
+    if (tuya_iot_activated(client)) {
+        atop_base_response_t response = {0};
+        ret = atop_service_client_reset(
+                client->activate.devid, 
+                client->activate.seckey, 
+                &response);
+        atop_base_response_free(&response);
+    }
+
     client->event.id = TUYA_EVENT_RESET;
     client->event.data = (void*)GW_LOCAL_RESET_FACTORY;
     iot_dispatch_event(client);
@@ -532,7 +541,7 @@ static int run_state_netcfg_mode_start(tuya_iot_client_t* client)
     rt = tuya_mqtt_init(&client->mqctx, &(const tuya_mqtt_config_t){
         .rootCA = tuya_rootCA_pem,
         .host = tuya_mqtt_server_host_get(),
-        .port = TUYA_MQTT_PORT,
+        .port = tuya_mqtt_server_port_get(),
         .uuid = client->uuid,
         .authkey = client->authkey,
         .timeout = MQTT_NETCFG_TIMEOUT,

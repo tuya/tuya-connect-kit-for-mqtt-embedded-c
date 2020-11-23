@@ -119,6 +119,9 @@ typedef int OPERATE_RET;
 #define OPRT_LINK_CORE_X509_ROOT_CRT_PARSE_ERROR           (-0x1e05)  //X509根证书解析失败
 #define OPRT_LINK_CORE_X509_DEVICE_CRT_PARSE_ERROR         (-0x1e06)  //X509设备证书解析失败
 #define OPRT_LINK_CORE_PK_PRIVATE_KEY_PARSE_ERROR          (-0x1e07)  //秘钥解析失败
+#define OPRT_LINK_CORE_HTTP_CLIENT_HEADER_ERROR            (-0x1e08)
+#define OPRT_LINK_CORE_HTTP_CLIENT_SEND_ERROR              (-0x1e09)
+#define OPRT_LINK_CORE_HTTP_RESPONSE_BUFFER_EMPTY          (-0x1e0a)
 #define OPRT_LINK_CORE_ERRCODE_MAX_CNT 8
 
 

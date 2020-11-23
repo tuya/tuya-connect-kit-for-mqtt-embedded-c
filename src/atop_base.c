@@ -272,9 +272,11 @@ static int32_t http_request_send( const TransportInterface_t * pTransportInterfa
     ( void ) memset( &requestHeaders, 0, sizeof( requestHeaders ) );
 
     /* Set the buffer used for storing request headers. */
-    static uint8_t header_buffer[HEADER_BUFFER_LENGTH];
-    requestHeaders.pBuffer = header_buffer;
     requestHeaders.bufferLen = HEADER_BUFFER_LENGTH;
+    requestHeaders.pBuffer = system_malloc(requestHeaders.bufferLen);
+    if (requestHeaders.pBuffer == NULL) {
+        return OPRT_LINK_CORE_HTTP_RESPONSE_BUFFER_EMPTY;
+    }
 
     httpStatus = HTTPClient_InitializeRequestHeaders( &requestHeaders,
                                                       requestInfo );
@@ -285,49 +287,38 @@ static int32_t http_request_send( const TransportInterface_t * pTransportInterfa
                                         ATOP_COMMON_HEADER,
                                         sizeof(ATOP_COMMON_HEADER) - 1U);
 
-    if( httpStatus == HTTPSuccess ) {
-        /* Initialize the response object. The same buffer used for storing
-         * request headers is reused here. */
-        if (NULL == response->pBuffer || response->bufferLen <= 0) {
-            return OPRT_MALLOC_FAILED;
-        }
-
-        TY_LOGI(   "Sending HTTP %.*s request to %.*s%.*s",
-                   ( int32_t ) requestInfo->methodLen, requestInfo->pMethod,
-                   ( int32_t ) requestInfo->hostLen, requestInfo->pHost,
-                   ( int32_t ) requestInfo->pathLen, requestInfo->pPath ) ;
-
-        /* Send the request and receive the response. */
-        httpStatus = HTTPClient_Send( pTransportInterface,
-                                      &requestHeaders,
-                                      ( uint8_t * ) pRequestBodyBuf,
-                                      reqBodyBufLen,
-                                      response,
-                                      0 );
-    }
-    else {
-        TY_LOGE( "Failed to initialize HTTP request headers: Error=%s.",
-                    HTTPClient_strerror( httpStatus ) );
+    if( httpStatus != HTTPSuccess ) {
+        TY_LOGE("HTTP header error:%d", httpStatus);
+        system_free(requestHeaders.pBuffer);
+        return OPRT_LINK_CORE_HTTP_CLIENT_HEADER_ERROR;
     }
 
-    if( httpStatus == HTTPSuccess ) {
-        TY_LOGI(   "Response Headers:\n%.*s\n"
-                   "Response Status:\n%u\n"
-                   "Response Body:\n%.*s\n",
-                   ( int32_t ) response->headersLen, response->pHeaders,
-                   response->statusCode,
-                   ( int32_t ) response->bodyLen, response->pBody );
+    /* Initialize the response object. The same buffer used for storing
+        * request headers is reused here. */
+    if (NULL == response->pBuffer || response->bufferLen <= 0) {
+        system_free(requestHeaders.pBuffer);
+        return OPRT_MALLOC_FAILED;
     }
-    else {
-        TY_LOGE( "Failed to send HTTP %.*s request to %.*s%.*s: Error=%s.",
-                    ( int32_t ) requestInfo->methodLen, requestInfo->pMethod,
-                    ( int32_t ) requestInfo->hostLen, requestInfo->pHost,
-                    ( int32_t ) requestInfo->pathLen, requestInfo->pPath,
-                    HTTPClient_strerror( httpStatus ));
-    }
+
+    TY_LOGI( "Sending HTTP %.*s request to %.*s%.*s",
+                ( int32_t ) requestInfo->methodLen, requestInfo->pMethod,
+                ( int32_t ) requestInfo->hostLen, requestInfo->pHost,
+                ( int32_t ) requestInfo->pathLen, requestInfo->pPath ) ;
+
+    /* Send the request and receive the response. */
+    httpStatus = HTTPClient_Send( pTransportInterface,
+                                    &requestHeaders,
+                                    ( uint8_t * ) pRequestBodyBuf,
+                                    reqBodyBufLen,
+                                    response,
+                                    0 );
+
+    /* Release headers buffer */
+    system_free(requestHeaders.pBuffer);
 
     if( httpStatus != HTTPSuccess ) {
-        return OPRT_COM_ERROR;
+        TY_LOGE("HTTPClient_Send error:%d", httpStatus);
+        return OPRT_LINK_CORE_HTTP_CLIENT_SEND_ERROR;
     }
 
     return OPRT_OK;
@@ -351,6 +342,11 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     params[idx].key = "a";
     params[idx++].value = (char*)request->api;
 
+    if (request->devid) {
+        params[idx].key = "devId";
+        params[idx++].value = (char*)request->devid;
+    }
+
     params[idx].key = "et";
     params[idx++].value = "1";
     
@@ -358,13 +354,10 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     sprintf(ts_str, "%d", request->timestamp);
     params[idx].key = "t";
     params[idx++].value = ts_str;
-    
+
     if (request->uuid) {
         params[idx].key = "uuid";
         params[idx++].value = (char*)request->uuid;
-    } else {
-        params[idx].key = "devId";
-        params[idx++].value = (char*)request->devid;
     }
     
     params[idx].key = "v";
