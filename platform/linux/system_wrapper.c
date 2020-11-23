@@ -2,9 +2,11 @@
 extern "C" {
 #endif
 
-#include "system_interface.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include "system_interface.h"
 
 /*
  * Time conversion constants.
@@ -49,8 +51,9 @@ uint32_t system_ticks( void )
 
 uint32_t system_timestamp()
 {
-    // TODO added offset
-    return (uint32_t)system_ticks();
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (uint32_t)tv.tv_sec;
 }
 
 void system_sleep( uint32_t time_ms )
