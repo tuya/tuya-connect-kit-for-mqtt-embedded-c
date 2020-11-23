@@ -117,10 +117,7 @@ typedef struct {
 } tuya_iot_config_t;
 
 struct tuya_iot_client_handle {
-    char software_ver[MAX_LENGTH_SW_VER + 1];
-    char productkey[MAX_LENGTH_PRODUCT_ID + 1];
-    char uuid[MAX_LENGTH_UUID + 1];
-    char authkey[MAX_LENGTH_AUTHKEY + 1];
+    tuya_iot_config_t config;
     uint8_t state;
     uint8_t ota_state;
     uint8_t netfcg_state;

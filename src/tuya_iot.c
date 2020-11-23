@@ -63,8 +63,8 @@ typedef enum {
 
 static int iot_dispatch_event(tuya_iot_client_t* client)
 {
-    if (client->event_handler) {
-        client->event_handler(client, &client->event);
+    if (client->config.event_handler) {
+        client->config.event_handler(client, &client->event);
     }
     return OPRT_OK;
 }
@@ -127,7 +127,7 @@ static int run_state_startup(tuya_iot_client_t* client)
     int rt = OPRT_OK;
 
     /* loading activated info */
-    const char* activate_data_key = client->uuid;
+    const char* activate_data_key = client->config.uuid;
     rt = activated_data_read(activate_data_key, &client->activate);
     if (OPRT_OK != rt) {
         TY_LOGW("activated data read fail:%d", rt);
@@ -250,7 +250,7 @@ static int run_state_reset(tuya_iot_client_t* client)
     tuya_mqtt_stop(&client->mqctx);
 
     local_storage_del((const char*)(client->activate.schemaId));
-    local_storage_del((const char*)(client->uuid));
+    local_storage_del((const char*)(client->config.uuid));
 
     client->state = STATE_RESTART;
     return OPRT_OK;
@@ -269,17 +269,17 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
         return OPRT_INVALID_PARM;
     }
 
-    /* config param loading */
+    /* Initialize all tuya_iot_client_t structs to 0. */
     memset(client, 0, sizeof(tuya_iot_client_t));
-    strcpy(client->software_ver, config->software_ver);
-    strcpy(client->productkey, config->productkey);
-    strcpy(client->uuid, config->uuid);
-    strcpy(client->authkey, config->authkey);
-    client->event_handler = config->event_handler;
-    TY_LOGD("software_ver:%s", client->software_ver);
-    TY_LOGD("productkey:%s", client->productkey);
-    TY_LOGD("uuid:%s", client->uuid);
-    TY_LOGD("authkey:%s", client->authkey);
+
+    /* Save the client config */
+    client->config = *config;
+
+    /* Config param dump */
+    TY_LOGD("software_ver:%s", client->config.software_ver);
+    TY_LOGD("productkey:%s", client->config.productkey);
+    TY_LOGD("uuid:%s", client->config.uuid);
+    TY_LOGD("authkey:%s", client->config.authkey);
 
     /* cJSON init */
     cJSON_Hooks hooks = {
@@ -459,7 +459,7 @@ static void token_activate_response_parse(atop_base_response_t* response)
 
     // activate info save
     char* result_string = cJSON_PrintUnformatted(result_root);
-    const char* activate_data_key = client->uuid;
+    const char* activate_data_key = client->config.uuid;
     TY_LOGD("result len %d :%s", (int)strlen(result_string), result_string);
     ret = local_storage_set(activate_data_key, (const uint8_t*)result_string, strlen(result_string));
     system_free(result_string);
@@ -506,10 +506,10 @@ static void mqtt_register_activate_token_on(tuya_mqtt_event_t* ev)
     /* acvitive request instantiate construct */
     device_activite_params_t activite_request = {
         .token = (const char*)token,
-        .product_key = (const char*)client->productkey,
-        .uuid = (const char*)client->uuid,
-        .authkey = (const char*)client->authkey,
-        .sw_ver = (const char*)client->software_ver,
+        .product_key = client->config.productkey,
+        .uuid = client->config.uuid,
+        .authkey = client->config.authkey,
+        .sw_ver = client->config.software_ver,
         .bv = BS_VERSION,
         .pv = PV_VERSION,
         .buflen_custom = MAX_LENGTH_ACTIVATE_BUFFER,
@@ -547,8 +547,8 @@ static int run_state_netcfg_mode_start(tuya_iot_client_t* client)
         .rootCA = tuya_rootCA_pem,
         .host = tuya_mqtt_server_host_get(),
         .port = tuya_mqtt_server_port_get(),
-        .uuid = client->uuid,
-        .authkey = client->authkey,
+        .uuid = client->config.uuid,
+        .authkey = client->config.authkey,
         .timeout = MQTT_NETCFG_TIMEOUT,
     });
     if (OPRT_OK != rt) {
