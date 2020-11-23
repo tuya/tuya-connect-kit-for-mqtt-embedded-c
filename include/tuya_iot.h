@@ -58,6 +58,7 @@ typedef enum {
     TUYA_EVENT_MQTT_CONNECTED,
     TUYA_EVENT_MQTT_DISCONNECT,
     TUYA_EVENT_DP_RECEIVE,
+    TUYA_EVENT_DP_RECEIVE_CJSON,
     TUYA_EVENT_RESET,
     TUYA_EVENT_WAIT_ACTIVATE,
 } tuya_event_id_t;
@@ -83,15 +84,15 @@ typedef enum {
 ((S) == TUYA_EVENT_MQTT_CONNECTED ? "TUYA_EVENT_MQTT_CONNECTED":\
 ((S) == TUYA_EVENT_MQTT_DISCONNECT ? "TUYA_EVENT_MQTT_DISCONNECT":\
 ((S) == TUYA_EVENT_DP_RECEIVE ? "TUYA_EVENT_DP_RECEIVE":\
+((S) == TUYA_EVENT_DP_RECEIVE_CJSON ? "TUYA_EVENT_DP_RECEIVE_CJSON":\
 ((S) == TUYA_EVENT_RESET ? "TUYA_EVENT_RESET":\
 ((S) == TUYA_EVENT_WAIT_ACTIVATE ? "TUYA_EVENT_WAIT_ACTIVATE":\
-"Unknown"))))))))))))))
+"Unknown")))))))))))))))
 
 typedef struct {
     tuya_event_id_t id;
     void* data;
     uint16_t length;
-    cJSON* json_dps;
 } tuya_event_msg_t;
 
 typedef struct tuya_iot_client_handle tuya_iot_client_t;
