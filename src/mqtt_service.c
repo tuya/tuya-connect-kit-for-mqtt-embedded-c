@@ -28,24 +28,6 @@ enum {
 	MQTT_STATE_YIELD,
 };
 
-extern const unsigned char tuya_rootCA_pem[];
-
-/*-----------------------------------------------------------*/
-#define NETWORK_BUFFER_SIZE    ( 1024U )
-
-/**
- * @brief Timeout for receiving CONNACK packet in milli seconds.
- */
-#define CONNACK_RECV_TIMEOUT_MS             ( 5000U )
-
-/**
- * @brief The network buffer must remain valid for the lifetime of the MQTT context.
- */
-static uint8_t buffer[ NETWORK_BUFFER_SIZE ];
-
-/*-----------------------------------------------------------*/
-
-
 static int tuya_mqtt_signature_tool(const tuya_meta_info_t *input, tuya_mqtt_access_t *signout)
 {
 	if (NULL == input || signout == NULL) {
@@ -224,7 +206,7 @@ static void eventCallback( MQTTContext_t * pMqttContext,
 
     packetIdentifier = pDeserializedInfo->packetIdentifier;
 
-	TY_LOGD("pPacketInfo->type:0x%x(%s), packetIdentifier:%d", 
+	TY_LOGV("pPacketInfo->type:0x%x(%s), packetIdentifier:%d", 
 			pPacketInfo->type, MQTT_EVENT_2STR(pPacketInfo->type), packetIdentifier );
 
     /* Handle incoming publish. The lower 4 bits of the publish packet
@@ -304,6 +286,9 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 {
 	int rt = OPRT_OK;
 
+	/* Clean to zero */
+	memset(context, 0, sizeof(tuya_mqtt_context_t));
+
 	/* Device token signature */
 	rt = tuya_mqtt_signature_tool(
 			&(const tuya_meta_info_t){
@@ -339,8 +324,8 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
     transport.recv = (TransportRecv_t)iot_tls_read;
 
 	/* Fill the values for network buffer. */
-    networkBuffer.pBuffer = buffer;
-    networkBuffer.size = NETWORK_BUFFER_SIZE;
+    networkBuffer.pBuffer = context->mqttbuffer;
+    networkBuffer.size = TUYA_MQTT_BUFFER_SIZE;
 
     /* Initialize MQTT library. */
     mqttStatus = MQTT_Init( &(context->mqclient),
@@ -464,7 +449,7 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 		system_free(buffer);
 		return OPRT_COM_ERROR;
 	}
-	TY_LOGD("printlen:%d, encryptlen:%d", printlen, (int)encrpyt_len);
+	TY_LOGV("printlen:%d, encryptlen:%d", printlen, (int)encrpyt_len);
 
 	// buffer copy
 	memcpy(buffer + TUYA_MQTT_DATA_OFFSET, encrypt_buffer, encrpyt_len);

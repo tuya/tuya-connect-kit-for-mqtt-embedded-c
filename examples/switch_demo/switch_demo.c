@@ -63,7 +63,7 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
         tuya_iot_dp_download(client, (const char*)event->data);
         break;
  
-    case TUYA_EVENT_WAIT_ACTIVATE:
+    case TUYA_EVENT_BIND_START:
         /* Print the QRCode for Tuya APP bind */
         example_qrcode_print(client->config.productkey, client->config.uuid);
         break;
