@@ -13,14 +13,26 @@ extern "C" {
 
 typedef struct mqtt_client mqtt_client_t;
 
+/**
+ * @brief The network buffer must remain valid for the lifetime of the MQTT context.
+ */
+#define TUYA_MQTT_BUFFER_SIZE (1024U)
+
+/**
+ * @brief Timeout for receiving CONNACK packet in milli seconds.
+ */
+#define CONNACK_RECV_TIMEOUT_MS             ( 5000U )
+
+
 // data max len
-#define TUYA_MQTT_CLIENTID_MAXLEN 32
-#define TUYA_MQTT_USERNAME_MAXLEN 32
-#define TUYA_MQTT_PASSWORD_MAXLEN 32
-#define TUYA_MQTT_CIPHER_KEY_MAXLEN 32
-#define TUYA_MQTT_DEVICE_ID_MAXLEN 32
-#define TUYA_MQTT_UUID_MAXLEN 32
-#define TUYA_MQTT_TOPIC_MAXLEN 64
+#define TUYA_MQTT_CLIENTID_MAXLEN (32U)
+#define TUYA_MQTT_USERNAME_MAXLEN (32U)
+#define TUYA_MQTT_PASSWORD_MAXLEN (32U)
+#define TUYA_MQTT_CIPHER_KEY_MAXLEN (32U)
+#define TUYA_MQTT_DEVICE_ID_MAXLEN (32U)
+#define TUYA_MQTT_UUID_MAXLEN (32U)
+#define TUYA_MQTT_TOPIC_MAXLEN (64U)
+#define TUYA_MQTT_TOPIC_MAXLEN (64U)
 
 // mqtt message package
 #define TUYA_MQTT_VER_LEN 3
@@ -132,10 +144,11 @@ typedef struct {
     MQTTContext_t mqclient;
     tuya_mqtt_access_t signature;
     mqtt_protocol_handle_t protocol_handle[MQTT_EVENT_ID_MAX];
-    int handle_num;
-    int sequence_in;
-    int sequence_out;
-    int state;
+    uint32_t sequence_in;
+    uint32_t sequence_out;
+    uint8_t handle_num;
+    uint8_t state;
+    uint8_t mqttbuffer[TUYA_MQTT_BUFFER_SIZE];
     bool manual_disconnect;
     void* user_data;
 } tuya_mqtt_context_t;

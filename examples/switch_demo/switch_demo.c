@@ -10,7 +10,7 @@
 #define SOFTWARE_VER     "1.0.0"
  
 /* for APP QRCode scan test */
-extern void example_qrcode_print(char* productkey, char* uuid);
+extern void example_qrcode_print(const char* productkey, const char* uuid);
  
 /* Tuya device handle */
 tuya_iot_client_t client;
@@ -63,9 +63,9 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
         tuya_iot_dp_download(client, (const char*)event->data);
         break;
  
-    case TUYA_EVENT_WAIT_ACTIVATE:
+    case TUYA_EVENT_BIND_START:
         /* Print the QRCode for Tuya APP bind */
-        example_qrcode_print(client->productkey, client->uuid);
+        example_qrcode_print(client->config.productkey, client->config.uuid);
         break;
  
     case TUYA_EVENT_MQTT_CONNECTED:
@@ -94,11 +94,11 @@ int main(int argc, char **argv)
  
     /* Start tuya iot task */
     tuya_iot_start(&client);
- 
+
     for(;;) {
         /* Loop to receive packets, and handles client keepalive */
         tuya_iot_yield(&client);
     }
- 
+
     return ret;
 }

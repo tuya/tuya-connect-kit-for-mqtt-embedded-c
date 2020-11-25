@@ -205,6 +205,8 @@ static int atop_response_data_decode(const char* key,
 static int atop_response_result_parse_cjson(const uint8_t* input, size_t ilen, 
                                             atop_base_response_t* response)
 {
+    int rt = OPRT_OK;
+
     if (NULL == input || NULL == response) {
         TY_LOGE("param error");
         return OPRT_INVALID_PARM;
@@ -237,20 +239,34 @@ static int atop_response_result_parse_cjson(const uint8_t* input, size_t ilen,
     if (cJSON_GetObjectItem(root, "success")->type == cJSON_True) {
         response->success = true;
         response->result = cJSON_DetachItemFromObject(root, "result");
-    } else {
-        response->success = false;
-        response->result = NULL;
-        
-        // TODO
-        response->errorCode = cJSON_GetObjectItem(root, "errorCode")->valuestring;
-        response->errorMsg = cJSON_GetObjectItem(root, "errorMsg")->valuestring;
-        TY_LOGD("response->errorCode: %s", response->errorCode);
-        TY_LOGD("response->errorMsg: %s", response->errorMsg);
+        cJSON_Delete(root);
+        return OPRT_OK;
+    } 
+    
+    // Exception parse
+    char* errorCode = NULL;
+    response->success = false;
+    response->result = NULL;
+
+    // error msg dump
+    if (cJSON_GetObjectItem(root, "errorMsg")) {
+        TY_LOGE("errorMsg:%s", cJSON_GetObjectItem(root, "errorMsg")->valuestring);
+    }
+
+    if (cJSON_GetObjectItem(root, "errorCode") == NULL) {
+        cJSON_Delete(root);
+        return OPRT_COM_ERROR;
+    }
+
+    errorCode = cJSON_GetObjectItem(root, "errorCode")->valuestring;
+
+    if(strcasecmp(errorCode, "GATEWAY_NOT_EXISTS") == 0) {
+        rt = OPRT_LINK_CORE_HTTP_GW_NOT_EXIST;
     }
 
     // free cJSON object
     cJSON_Delete(root);
-    return OPRT_OK;
+    return rt;
 }
 
 static int32_t http_request_send( const TransportInterface_t * pTransportInterface,
@@ -317,7 +333,11 @@ static int32_t http_request_send( const TransportInterface_t * pTransportInterfa
     system_free(requestHeaders.pBuffer);
 
     if( httpStatus != HTTPSuccess ) {
-        TY_LOGE("HTTPClient_Send error:%d", httpStatus);
+        TY_LOGE( "Failed to send HTTP %.*s request to %.*s%.*s: Error=%s.",
+                    ( int32_t ) requestInfo->methodLen, requestInfo->pMethod,
+                    ( int32_t ) requestInfo->hostLen, requestInfo->pHost,
+                    ( int32_t ) requestInfo->pathLen, requestInfo->pPath,
+                    HTTPClient_strerror( httpStatus ));
         return OPRT_LINK_CORE_HTTP_CLIENT_SEND_ERROR;
     }
 
@@ -504,15 +524,14 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
                                     http_response.pBody, http_response.bodyLen,
                                     result_buffer, &result_buffer_length);
 
-    if (OPRT_OK != rt) {
-        TY_LOGE("atop_response_decode error:%d", rt);
+    if (OPRT_OK == rt) {
+        rt = atop_response_result_parse_cjson(result_buffer, result_buffer_length, response);
         system_free(result_buffer);
         return rt;
     }
 
-    rt = atop_response_result_parse_cjson(result_buffer, result_buffer_length, response);
-    system_free(result_buffer);
-    return rt;
+    TY_LOGW("atop_response_decode error:%d, try parse the plaintext data.", rt);
+    return atop_response_result_parse_cjson(http_response.pBody, http_response.bodyLen, response);
 }
 
 void atop_base_response_free(atop_base_response_t* response)

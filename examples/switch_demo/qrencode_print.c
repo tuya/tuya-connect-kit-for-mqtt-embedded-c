@@ -148,12 +148,12 @@ static int writeUTF8(const QRcode *qrcode, const char *outfile, int use_ansi, in
 	return 0;
 }
 
-void example_qrcode_print(char* productkey, char* uuid)
+void example_qrcode_print(const char* productkey, const char* uuid)
 {
 	char buffer[255];
 	printf("\r\n");
 	sprintf(buffer, "https://smartapp.tuya.com/s/p?p=%s&uuid=%s&v=2.0", productkey, uuid);
 
-    QRcode* qrcode = encode(buffer, sizeof(buffer));
+    QRcode* qrcode = encode((const unsigned char*)buffer, sizeof(buffer));
     writeUTF8(qrcode, NULL, 0, 0);
 }

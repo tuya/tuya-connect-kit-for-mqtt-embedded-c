@@ -28,8 +28,6 @@ typedef struct {
 typedef struct {
     bool success;
     cJSON* result;
-    void* errorCode;
-    void* errorMsg;
     int32_t t;
     void* user_data;
 } atop_base_response_t;

@@ -34,6 +34,7 @@ extern "C" {
 #define MAX_LENGTH_SECKEY      16
 #define MAX_LENGTH_LOCALKEY    16
 #define MAX_LENGTH_SCHEMA_ID   16
+#define MAX_LENGTH_TOKEN       10
 #define MAX_LENGTH_SW_VER      10   // max string length of VERSION
 
 /* tuya sdk gateway reset type */
@@ -47,20 +48,14 @@ typedef enum {
 
 typedef enum {
     TUYA_EVENT_ERROR = 0,       /*!< This event occurs when there are any errors during execution */
-    TUYA_EVENT_NETCFG_START,
-    TUYA_EVENT_NETCFG_COMPLETE,
-    TUYA_EVENT_NETCFG_TIMEOUT,
-    TUYA_EVENT_NETCFG_FAILURE,
+    TUYA_EVENT_BIND_START,
+    TUYA_EVENT_BIND_TOKEN_ON,
     TUYA_EVENT_ACTIVATE_SUCCESSED,
-    TUYA_EVENT_WIFI_SSID_PASSWD_RECV,
-    TUYA_EVENT_WIFI_CONNECTED,
-    TUYA_EVENT_WIFI_DISCONNECTED,
     TUYA_EVENT_MQTT_CONNECTED,
     TUYA_EVENT_MQTT_DISCONNECT,
     TUYA_EVENT_DP_RECEIVE,
     TUYA_EVENT_DP_RECEIVE_CJSON,
     TUYA_EVENT_RESET,
-    TUYA_EVENT_WAIT_ACTIVATE,
 } tuya_event_id_t;
 
 typedef enum {
@@ -73,21 +68,15 @@ typedef enum {
 
 #define STR2_EVENT_ID(S)\
 ((S) == TUYA_EVENT_ERROR ? "TUYA_EVENT_ERROR":\
-((S) == TUYA_EVENT_NETCFG_START ? "TUYA_EVENT_NETCFG_START":\
-((S) == TUYA_EVENT_NETCFG_COMPLETE ? "TUYA_EVENT_NETCFG_COMPLETE":\
-((S) == TUYA_EVENT_NETCFG_TIMEOUT ? "TUYA_EVENT_NETCFG_TIMEOUT":\
-((S) == TUYA_EVENT_NETCFG_FAILURE ? "TUYA_EVENT_NETCFG_FAILURE":\
+((S) == TUYA_EVENT_BIND_START ? "TUYA_EVENT_BIND_START":\
+((S) == TUYA_EVENT_BIND_TOKEN_ON ? "TUYA_EVENT_BIND_TOKEN_ON":\
 ((S) == TUYA_EVENT_ACTIVATE_SUCCESSED ? "TUYA_EVENT_ACTIVATE_SUCCESSED":\
-((S) == TUYA_EVENT_WIFI_SSID_PASSWD_RECV ? "TUYA_EVENT_WIFI_SSID_PASSWD_RECV":\
-((S) == TUYA_EVENT_WIFI_CONNECTED ? "TUYA_EVENT_WIFI_CONNECTED":\
-((S) == TUYA_EVENT_WIFI_DISCONNECTED ? "TUYA_EVENT_WIFI_DISCONNECTED":\
 ((S) == TUYA_EVENT_MQTT_CONNECTED ? "TUYA_EVENT_MQTT_CONNECTED":\
 ((S) == TUYA_EVENT_MQTT_DISCONNECT ? "TUYA_EVENT_MQTT_DISCONNECT":\
 ((S) == TUYA_EVENT_DP_RECEIVE ? "TUYA_EVENT_DP_RECEIVE":\
 ((S) == TUYA_EVENT_DP_RECEIVE_CJSON ? "TUYA_EVENT_DP_RECEIVE_CJSON":\
 ((S) == TUYA_EVENT_RESET ? "TUYA_EVENT_RESET":\
-((S) == TUYA_EVENT_WAIT_ACTIVATE ? "TUYA_EVENT_WAIT_ACTIVATE":\
-"Unknown")))))))))))))))
+"Unknown")))))))))
 
 typedef struct {
     tuya_event_id_t id;
@@ -116,18 +105,20 @@ typedef struct {
     event_handle_cb_t event_handler;
 } tuya_iot_config_t;
 
+typedef int (*tuya_activate_token_get_t)(const tuya_iot_config_t* config, char* token_out);
+
 struct tuya_iot_client_handle {
-    char software_ver[MAX_LENGTH_SW_VER + 1];
-    char productkey[MAX_LENGTH_PRODUCT_ID + 1];
-    char uuid[MAX_LENGTH_UUID + 1];
-    char authkey[MAX_LENGTH_AUTHKEY + 1];
+    tuya_iot_config_t config;
     uint8_t state;
+    uint8_t retry_count;
     uint8_t ota_state;
     uint8_t netfcg_state;
     tuya_event_msg_t event;
     activated_params_t activate;
     tuya_mqtt_context_t mqctx;
     event_handle_cb_t event_handler;
+    tuya_activate_token_get_t token_get;
+    char token[MAX_LENGTH_TOKEN];
 };
 
 /**
@@ -196,6 +187,13 @@ int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps);
  * @return false inactivated.
  */
 bool tuya_iot_activated(tuya_iot_client_t* client);
+
+/**
+ * @brief Set up a customized get token interface.
+ * 
+ * @param token_get_func - token get func
+ */
+void tuya_iot_token_get_port_register(tuya_iot_client_t* client, tuya_activate_token_get_t token_get_func);
 
 #ifdef __cplusplus
 }
