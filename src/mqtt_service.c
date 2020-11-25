@@ -587,7 +587,7 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 			break;
 
 		case MQTT_STATE_YIELD:
-			mqttStatus = MQTT_ProcessLoop( &context->mqclient, 1000 );
+			mqttStatus = MQTT_ProcessLoop( &context->mqclient, context->network.tlsConnectParams.timeout_ms );
 
 			if( mqttStatus != MQTTSuccess ) {
 				// TODO add error code

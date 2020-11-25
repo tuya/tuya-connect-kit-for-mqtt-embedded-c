@@ -31,6 +31,7 @@ typedef enum {
     STATE_DATA_LOAD,
     STATE_TOKEN_PENDING,
     STATE_ACTIVATING,
+    STATE_STARTUP_UPDATE,
     STATE_MQTT_CONNECT_START,
     STATE_MQTT_CONNECTING,
     STATE_MQTT_YIELD,
@@ -262,6 +263,27 @@ static void mqtt_reset_cmd_on(tuya_mqtt_event_t* ev)
     TY_LOGI("STATE_RESET...");
 }
 
+static int run_state_startup_update(tuya_iot_client_t* client)
+{
+    int rt = OPRT_OK;
+
+    atop_base_response_t response = {0};
+
+    rt = atop_service_dynamic_cfg_get_v20(  client->activate.devid, 
+                                            client->activate.seckey, 
+                                            HTTP_DYNAMIC_CFG_ALL, 
+                                            &response);
+    if (rt != OPRT_OK) {
+        TY_LOGE("dynamic_cfg_get error:%d", rt);
+        return rt;
+    }
+
+    /* TODO result process*/
+    atop_base_response_free(&response);
+
+    return rt;
+}
+
 static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
 {
     int rt = OPRT_OK;
@@ -293,7 +315,6 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
     tuya_mqtt_protocol_register(&client->mqctx, PRO_CMD, mqtt_dp_receive_on, client);
     tuya_mqtt_protocol_register(&client->mqctx, PRO_GW_RESET, mqtt_reset_cmd_on, client);
 
-    client->state = STATE_MQTT_CONNECTING;
     return rt;
 }
 
@@ -408,7 +429,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         /* Try to read the local activation data. 
          * If the reading is successful, the device has been activated. */
         if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
-            client->state = STATE_MQTT_CONNECT_START;
+            client->state = STATE_STARTUP_UPDATE;
             break;
         }
 
@@ -421,7 +442,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     case STATE_TOKEN_PENDING:
         /* If token_get port no preset, Use default mqtt bind mode */
         if (client->token_get == NULL) {
-            client->token_get = mqtt_bind_token_get;
+            tuya_iot_token_get_port_register(client, mqtt_bind_token_get);
         }
 
         /* Send Bind event to user program */
@@ -451,8 +472,17 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         }
         break;
 
+    case STATE_STARTUP_UPDATE:
+        if (run_state_startup_update(client) == OPRT_LINK_CORE_HTTP_GW_NOT_EXIST) {
+            client->state = STATE_RESET;
+            break;
+        }
+        client->state = STATE_MQTT_CONNECT_START;
+        break;
+
     case STATE_MQTT_CONNECT_START:
         run_state_mqtt_connect_start(client);
+        client->state = STATE_MQTT_CONNECTING;
         break;
 
     case STATE_MQTT_CONNECTING:
