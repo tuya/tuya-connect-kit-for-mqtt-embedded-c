@@ -20,8 +20,6 @@ uint32_t system_timestamp();
 
 void system_sleep(uint32_t time_ms);
 
-void system_reboot();
-
 #ifdef __cplusplus
 }
 #endif
