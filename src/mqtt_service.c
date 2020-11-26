@@ -207,7 +207,7 @@ static void eventCallback( MQTTContext_t * pMqttContext,
     packetIdentifier = pDeserializedInfo->packetIdentifier;
 
 	TY_LOGV("pPacketInfo->type:0x%x(%s), packetIdentifier:%d", 
-			pPacketInfo->type, MQTT_EVENT_2STR(pPacketInfo->type), packetIdentifier );
+			pPacketInfo->type, MQTT_EVENT_2STR(pPacketInfo->type & 0xF0U), packetIdentifier );
 
     /* Handle incoming publish. The lower 4 bits of the publish packet
      * type is used for the dup, QoS, and retain flags. Hence masking
@@ -305,8 +305,13 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 	}
 
 	/* TLS pre init */
-	rt = iot_tls_init(&context->network, config->rootCA, NULL, NULL,
-						config->host, config->port, config->timeout, true);
+	rt = iot_tls_init(&context->network, &(const TLSConnectParams){
+		.pRootCALocation = config->rootCA,
+		.pDestinationURL = config->host,
+		.DestinationPort = config->port,
+		.TimeoutMs = config->timeout,
+		.ServerVerificationFlag = true,
+	});
 	if (OPRT_OK != rt) {
 		TY_LOGE("iot_tls_init fail:%d", rt);
 		return rt;
@@ -587,7 +592,7 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 			break;
 
 		case MQTT_STATE_YIELD:
-			mqttStatus = MQTT_ProcessLoop( &context->mqclient, context->network.tlsConnectParams.timeout_ms );
+			mqttStatus = MQTT_ProcessLoop( &context->mqclient, context->network.tlsConnectParams.TimeoutMs );
 
 			if( mqttStatus != MQTTSuccess ) {
 				// TODO add error code
