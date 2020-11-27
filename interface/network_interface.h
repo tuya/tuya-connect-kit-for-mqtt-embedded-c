@@ -44,7 +44,7 @@ typedef struct {
 	const char *pDevicePrivateKeyLocation;    ///< Pointer to string containing the filename (including path) of the device private key file.
 	const char *pDestinationURL;                ///< Pointer to string containing the endpoint of the MQTT service.
 	uint16_t DestinationPort;            ///< Integer defining the connection port of the MQTT service.
-	uint32_t timeout_ms;                ///< Unsigned integer defining the TLS handshake timeout value in milliseconds.
+	uint32_t TimeoutMs;                ///< Unsigned integer defining the TLS handshake timeout value in milliseconds.
 	bool ServerVerificationFlag;        ///< Boolean.  True = perform server certificate hostname validation.  False = skip validation \b NOT recommended.
 } TLSConnectParams;
 
@@ -54,7 +54,7 @@ typedef struct {
  * Structure for defining a network connection.
  */
 struct NetworkContext {
-	int (*connect)(NetworkContext_t *, TLSConnectParams *);
+	int (*connect)(NetworkContext_t *, const TLSConnectParams *);
 	int (*read) (NetworkContext_t *, unsigned char *, size_t);   ///< Function pointer pointing to the network function to read from the network
 	int (*write)(NetworkContext_t *, const unsigned char *, size_t);    ///< Function pointer pointing to the network function to write to the network
 	int (*disconnect)(NetworkContext_t *);    ///< Function pointer pointing to the network function to disconnect from the network
@@ -71,19 +71,11 @@ struct NetworkContext {
  * the network layer function pointers to platform implementations.
  *
  * @param pNetwork - Pointer to a NetworkContext_t struct defining the network interface.
- * @param pRootCALocation - Path of the location of the Root CA
- * @param pDeviceCertLocation - Path to the location of the Device Cert
- * @param pDevicyPrivateKeyLocation - Path to the location of the device private key file
- * @param pDestinationURL - The target endpoint to connect to
- * @param DestinationPort - The port on the target to connect to
- * @param timeout_ms - The value to use for timeout of operation
- * @param ServerVerificationFlag - used to decide whether server verification is needed or not
+ * @param TLSParams - TLSConnectParams defines the properties of the TLS connection.
  *
  * @return int - successful initialization or TLS error
  */
-int iot_tls_init(NetworkContext_t *pNetwork, const char *pRootCALocation, const char *pDeviceCertLocation,
-					const char *pDevicePrivateKeyLocation, const char *pDestinationURL,
-					uint16_t DestinationPort, uint32_t timeout_ms, bool ServerVerificationFlag);
+int iot_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *TLSParams);
 
 /**
  * @brief Create a TLS socket and open the connection
@@ -91,10 +83,11 @@ int iot_tls_init(NetworkContext_t *pNetwork, const char *pRootCALocation, const 
  * Creates an open socket connection including TLS handshake.
  *
  * @param pNetwork - Pointer to a NetworkContext_t struct defining the network interface.
- * @param TLSParams - TLSConnectParams defines the properties of the TLS connection.
+ * @param TLSParams - TLSConnectParams defines the properties of the TLS connection, 
+ * 					  Optional parameter. If set to NULL, use the initialization parameter to connect.
  * @return int - successful connection or TLS error
  */
-int iot_tls_connect(NetworkContext_t *pNetwork, TLSConnectParams *TLSParams);
+int iot_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *TLSParams);
 
 /**
  * @brief Disconnect from network socket

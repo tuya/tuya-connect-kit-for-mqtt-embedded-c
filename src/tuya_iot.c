@@ -25,7 +25,6 @@
 extern const char tuya_rootCA_pem[];
 
 typedef enum {
-    STATE_INIT,
     STATE_IDLE,
     STATE_START,
     STATE_DATA_LOAD,
@@ -48,6 +47,10 @@ typedef enum {
 } tuya_run_state_t;
 
 
+/* -------------------------------------------------------------------------- */
+/*                          Internal utils functions                          */
+/* -------------------------------------------------------------------------- */
+
 static int iot_dispatch_event(tuya_iot_client_t* client)
 {
     if (client->config.event_handler) {
@@ -55,6 +58,10 @@ static int iot_dispatch_event(tuya_iot_client_t* client)
     }
     return OPRT_OK;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                            Activate data process                           */
+/* -------------------------------------------------------------------------- */
 
 static int activate_json_string_parse(const char* str, activated_params_t* out)
 {
@@ -208,7 +215,11 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
     return OPRT_OK;
 }
 
-static void mqtt_dp_receive_on(tuya_mqtt_event_t* ev)
+/* -------------------------------------------------------------------------- */
+/*                         Tuya MQTT service callback                         */
+/* -------------------------------------------------------------------------- */
+
+static void mqtt_service_dp_receive_on(tuya_mqtt_event_t* ev)
 {
     tuya_iot_client_t* client = ev->user_data;
     cJSON* data = (cJSON*)(ev->data);
@@ -235,7 +246,7 @@ static void mqtt_dp_receive_on(tuya_mqtt_event_t* ev)
     iot_dispatch_event(client);
 }
 
-static void mqtt_reset_cmd_on(tuya_mqtt_event_t* ev)
+static void mqtt_service_reset_cmd_on(tuya_mqtt_event_t* ev)
 {
     tuya_iot_client_t* client = ev->user_data;
     cJSON* data = (cJSON*)(ev->data);
@@ -262,6 +273,10 @@ static void mqtt_reset_cmd_on(tuya_mqtt_event_t* ev)
     client->state = STATE_RESET;
     TY_LOGI("STATE_RESET...");
 }
+
+/* -------------------------------------------------------------------------- */
+/*                       Internal machine state process                       */
+/* -------------------------------------------------------------------------- */
 
 static int run_state_startup_update(tuya_iot_client_t* client)
 {
@@ -312,8 +327,8 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
     }
 
     /* callback register */
-    tuya_mqtt_protocol_register(&client->mqctx, PRO_CMD, mqtt_dp_receive_on, client);
-    tuya_mqtt_protocol_register(&client->mqctx, PRO_GW_RESET, mqtt_reset_cmd_on, client);
+    tuya_mqtt_protocol_register(&client->mqctx, PRO_CMD, mqtt_service_dp_receive_on, client);
+    tuya_mqtt_protocol_register(&client->mqctx, PRO_GW_RESET, mqtt_service_reset_cmd_on, client);
 
     return rt;
 }
@@ -337,6 +352,10 @@ static int run_state_reset(tuya_iot_client_t* client)
 
     return OPRT_OK;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                Tuya IoT API                                */
+/* -------------------------------------------------------------------------- */
 
 int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
 {
@@ -370,7 +389,7 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
     };
     cJSON_InitHooks(&hooks);
 
-    client->state = STATE_INIT;
+    client->state = STATE_IDLE;
     return ret;
 }
 
@@ -418,6 +437,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         break;
 
     case STATE_IDLE:
+        system_sleep(500);
         break;
 
     case STATE_START:
@@ -510,9 +530,6 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     case STATE_STOP:
         tuya_mqtt_stop(&client->mqctx);
         client->state = STATE_IDLE;
-        break;
-
-    case STATE_INIT:
         break;
 
     default:

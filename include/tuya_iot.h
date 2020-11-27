@@ -111,12 +111,9 @@ struct tuya_iot_client_handle {
     tuya_iot_config_t config;
     uint8_t state;
     uint8_t retry_count;
-    uint8_t ota_state;
-    uint8_t netfcg_state;
     tuya_event_msg_t event;
     activated_params_t activate;
     tuya_mqtt_context_t mqctx;
-    event_handle_cb_t event_handler;
     tuya_activate_token_get_t token_get;
     char token[MAX_LENGTH_TOKEN];
 };

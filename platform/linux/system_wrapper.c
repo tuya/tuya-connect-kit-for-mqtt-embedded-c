@@ -68,13 +68,6 @@ void system_sleep( uint32_t time_ms )
     ( void ) nanosleep( &sleepTime, NULL );
 }
 
-void system_reboot()
-{
-	while(1) {
-		system_sleep(1000);
-	}
-}
-
 #ifdef __cplusplus
 }
 #endif

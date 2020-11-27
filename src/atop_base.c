@@ -341,6 +341,13 @@ static int32_t http_request_send( const TransportInterface_t * pTransportInterfa
         return OPRT_LINK_CORE_HTTP_CLIENT_SEND_ERROR;
     }
 
+    TY_LOGV("Response Headers:\n%.*s\n"
+            "Response Status:\n%u\n"
+            "Response Body:\n%.*s\n",
+            ( int32_t ) response->headersLen, response->pHeaders,
+            response->statusCode,
+            ( int32_t ) response->bodyLen, response->pBody );
+
     return OPRT_OK;
 }
 
@@ -428,8 +435,15 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     /* TLS pre init */
     NetworkContext_t network;
     extern const unsigned char tuya_rootCA_pem[];
-	rt = iot_tls_init(&network, (char*)tuya_rootCA_pem, NULL, NULL,
-						request->host, request->port, 2000, true);
+    
+	rt = iot_tls_init(&network, &(const TLSConnectParams){
+            .pRootCALocation = tuya_rootCA_pem,
+            .pDestinationURL = request->host,
+            .DestinationPort = request->port,
+            .TimeoutMs = DEFAULT_HTTP_TIMEOUT,
+            .ServerVerificationFlag = true
+    });
+
 	if (OPRT_OK != rt) {
 		TY_LOGE("iot_tls_init fail:%d", rt);
         system_free(path_buffer);

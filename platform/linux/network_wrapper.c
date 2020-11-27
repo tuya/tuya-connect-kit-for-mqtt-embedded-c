@@ -41,17 +41,16 @@ struct tls_context {
 	mbedtls_ctr_drbg_context ctr_drbg;
 	mbedtls_ssl_context ssl;
 	mbedtls_ssl_config conf;
-	uint32_t flags;
 	mbedtls_x509_crt cacert;
 	mbedtls_x509_crt clicert;
 	mbedtls_pk_context pkey;
 	mbedtls_net_context server_fd;
+	uint32_t flags;
 };
 
 /*
  * This is a function to do further verification if needed on the cert received
  */
-
 static int _iot_tls_verify_cert(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *flags) {
 	char buf[1024];
 	((void) data);
@@ -70,35 +69,18 @@ static int _iot_tls_verify_cert(void *data, mbedtls_x509_crt *crt, int depth, ui
 	return 0;
 }
 
-static void _iot_tls_set_connect_params(NetworkContext_t *pNetwork, const char *pRootCALocation, const char *pDeviceCertLocation,
-								 const char *pDevicePrivateKeyLocation, const char *pDestinationURL,
-								 uint16_t destinationPort, uint32_t timeout_ms, bool ServerVerificationFlag)
-{
-	pNetwork->tlsConnectParams.DestinationPort = destinationPort;
-	pNetwork->tlsConnectParams.pDestinationURL = pDestinationURL;
-	pNetwork->tlsConnectParams.pDeviceCertLocation = pDeviceCertLocation;
-	pNetwork->tlsConnectParams.pDevicePrivateKeyLocation = pDevicePrivateKeyLocation;
-	pNetwork->tlsConnectParams.pRootCALocation = pRootCALocation;
-	pNetwork->tlsConnectParams.timeout_ms = timeout_ms;
-	pNetwork->tlsConnectParams.ServerVerificationFlag = ServerVerificationFlag;
-}
-
-int iot_tls_init(NetworkContext_t *pNetwork, const char *pRootCALocation, const char *pDeviceCertLocation,
-					const char *pDevicePrivateKeyLocation, const char *pDestinationURL,
-					uint16_t destinationPort, uint32_t timeout_ms, bool ServerVerificationFlag)
+int iot_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *params)
 {
 	if (NULL == pNetwork) {
 		return OPRT_INVALID_PARM;
 	}
-
-	_iot_tls_set_connect_params(pNetwork, pRootCALocation, pDeviceCertLocation, pDevicePrivateKeyLocation,
-								pDestinationURL, destinationPort, timeout_ms, ServerVerificationFlag);
 
 	pNetwork->connect = iot_tls_connect;
 	pNetwork->read = iot_tls_read;
 	pNetwork->write = iot_tls_write;
 	pNetwork->disconnect = iot_tls_disconnect;
 	pNetwork->destroy = iot_tls_destroy;
+	pNetwork->tlsConnectParams = *params;
 
 	tls_context_t* tls_ctx = mbedtls_calloc(1, sizeof(tls_context_t));
 	if(NULL == tls_ctx) {
@@ -111,7 +93,7 @@ int iot_tls_init(NetworkContext_t *pNetwork, const char *pRootCALocation, const 
 	return OPRT_OK;
 }
 
-int iot_tls_connect(NetworkContext_t *pNetwork, TLSConnectParams *params)
+int iot_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *params)
 {
 	int ret = 0;
 	tls_context_t *tlsDataParams = NULL;
@@ -123,9 +105,7 @@ int iot_tls_connect(NetworkContext_t *pNetwork, TLSConnectParams *params)
 	}
 
 	if(NULL != params) {
-		_iot_tls_set_connect_params(pNetwork, params->pRootCALocation, params->pDeviceCertLocation,
-									params->pDevicePrivateKeyLocation, params->pDestinationURL,
-									params->DestinationPort, params->timeout_ms, params->ServerVerificationFlag);
+		pNetwork->tlsConnectParams = *params;
 	}
 
 	tlsDataParams = (tls_context_t*)(pNetwork->context);
@@ -199,7 +179,7 @@ int iot_tls_connect(NetworkContext_t *pNetwork, TLSConnectParams *params)
 	} log_debug(" ok\n");
 
 	mbedtls_ssl_set_bio(&(tlsDataParams->ssl), &(tlsDataParams->server_fd), mbedtls_net_send, NULL, mbedtls_net_recv_timeout);
-	mbedtls_ssl_conf_read_timeout(&(tlsDataParams->conf), pNetwork->tlsConnectParams.timeout_ms);
+	mbedtls_ssl_conf_read_timeout(&(tlsDataParams->conf), pNetwork->tlsConnectParams.TimeoutMs);
 
 	log_debug("  . Setting up the SSL/TLS structure...");
 	if((ret = mbedtls_ssl_config_defaults(&(tlsDataParams->conf), MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM,
