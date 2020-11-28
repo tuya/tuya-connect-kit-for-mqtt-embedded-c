@@ -49,25 +49,25 @@
 SDK 需要通过 MQTT 和 HTTP 协议与服务端交互，所有通信需要基于 TLS 连接，需要你的平台具备 TCP/IP 协议栈实现以下 API，SDK 中包含了 Linux环境下基于 mbedTLS 库作为依赖实现的以下接口的示例，如果您平台已基础 mbedTLS，可使用 Linux 平台下的 platform/linux/mbedtls/network_mbedtls_wrapper.c 接口封装适配快速接入；
 如果您的平台没有 mbedTLS 可以参考 [mbedtls 移植指导](https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS) 完成移植。
 
-`int iot_tls_init(Network *pNetwork, const TLSConnectParams *TLSParams);`
+`int network_tls_init(Network *pNetwork, const TLSConnectParams *TLSParams);`
 初始化 TLS Network 网络连接管理结构对象。
 
-`int iot_tls_connect(Network *pNetwork, const TLSConnectParams *TLSParams);`
+`int network_tls_connect(Network *pNetwork, const TLSConnectParams *TLSParams);`
 建立 TLS 连接，TLSParams 参数为可选参数，如果传入参数为 NULL，默认使用初始化的连接参数。
 
-`int iot_tls_write(Network*, unsigned char*, size_t);`
+`int network_tls_write(Network*, unsigned char*, size_t);`
 Write to the TLS network buffer.
 
-`int iot_tls_read(Network*, unsigned char*,  size_t);`
+`int network_tls_read(Network*, unsigned char*,  size_t);`
 Read from the TLS network buffer.
 
-`int iot_tls_disconnect(Network *pNetwork);`
+`int network_tls_disconnect(Network *pNetwork);`
 断开 TLS 连接。
 
-`int iot_tls_destroy(Network *pNetwork);`
+`int network_tls_destroy(Network *pNetwork);`
 释放 TLS 连接上下文。
 
-`int iot_tls_is_connected(Network *pNetwork);`
+`int network_tls_is_connected(Network *pNetwork);`
 检查 TLS 是否已经连接上。
 
 

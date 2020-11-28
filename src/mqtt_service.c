@@ -244,7 +244,7 @@ static void eventCallback( MQTTContext_t * pMqttContext,
                 break;
 
             case MQTT_PACKET_TYPE_PUBREC:
-                TY_LOGD( "PUBREC received for packet id %u.\n\n",
+                TY_LOGV( "PUBREC received for packet id %u.\n\n",
                            packetIdentifier );
                 /* Cleanup publish packet when a PUBREC is received. */
                 // cleanupOutgoingPublishWithPacketID( packetIdentifier );
@@ -254,7 +254,7 @@ static void eventCallback( MQTTContext_t * pMqttContext,
 
                 /* Nothing to be done from application as library handles
                  * PUBREL. */
-                TY_LOGD( "PUBREL received for packet id %u.\n\n",
+                TY_LOGV( "PUBREL received for packet id %u.\n\n",
                            packetIdentifier );
                 break;
 
@@ -262,7 +262,7 @@ static void eventCallback( MQTTContext_t * pMqttContext,
 
                 /* Nothing to be done from application as library handles
                  * PUBCOMP. */
-                TY_LOGD( "PUBCOMP received for packet id %u.\n\n",
+                TY_LOGV( "PUBCOMP received for packet id %u.\n\n",
                            packetIdentifier );
                 break;
 
@@ -270,13 +270,13 @@ static void eventCallback( MQTTContext_t * pMqttContext,
 
                 /* Nothing to be done from application as library handles
                  * PUBACK. */
-                TY_LOGD( "PUBACK received for packet id %u.\n\n",
+                TY_LOGV( "PUBACK received for packet id %u.\n\n",
                            packetIdentifier );
                 break;
 
             /* Any other packet type is invalid. */
             default:
-                TY_LOGE( "Unknown packet type received:(%02x).\n\n",
+                TY_LOGW( "Unknown packet type received:(%02x).\n\n",
                             pPacketInfo->type );
         }
     }
@@ -305,7 +305,7 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 	}
 
 	/* TLS pre init */
-	rt = iot_tls_init(&context->network, &(const TLSConnectParams){
+	rt = network_tls_init(&context->network, &(const TLSConnectParams){
 		.pRootCALocation = config->rootCA,
 		.pDestinationURL = config->host,
 		.DestinationPort = config->port,
@@ -313,7 +313,7 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 		.ServerVerificationFlag = true,
 	});
 	if (OPRT_OK != rt) {
-		TY_LOGE("iot_tls_init fail:%d", rt);
+		TY_LOGE("network_tls_init fail:%d", rt);
 		return rt;
 	}
 
@@ -325,8 +325,8 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
      * For this demo, TCP sockets are used to send and receive data
      * from network. Network context is SSL context for OpenSSL.*/
     transport.pNetworkContext = &context->network;
-    transport.send = (TransportSend_t)iot_tls_write;
-    transport.recv = (TransportRecv_t)iot_tls_read;
+    transport.send = (TransportSend_t)network_tls_write;
+    transport.recv = (TransportRecv_t)network_tls_read;
 
 	/* Fill the values for network buffer. */
     networkBuffer.pBuffer = context->mqttbuffer;
@@ -342,7 +342,7 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 
     if( mqttStatus != MQTTSuccess ) {
         TY_LOGE( "MQTT init failed: Status = %s.", MQTT_Status_strerror( mqttStatus ) );
-		iot_tls_destroy(&context->network);
+		network_tls_destroy(&context->network);
 		// TODO new error code
 		return OPRT_COM_ERROR;
     }
@@ -465,7 +465,7 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 
 	// squence
 	uint32_t sequence_out = context->sequence_out++;
-	TY_LOGD("sequence out:%d", sequence_out);
+	TY_LOGV("sequence out:%d", sequence_out);
 #if BYTE_ORDER == LITTLE_ENDIAN
 	sequence_out = DWORD_SWAP(sequence_out);
 #endif

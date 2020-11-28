@@ -197,7 +197,7 @@ static int atop_response_data_decode(const char* key,
         TY_LOGE("atop_data_decrpyt error: %d", rt);
         return rt;
     }
-    TY_LOGV("root result len:\r\n%.*s", *olen, output);
+    TY_LOGV("result:\r\n%.*s", *olen, output);
 
     return rt;
 }
@@ -436,7 +436,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     NetworkContext_t network;
     extern const unsigned char tuya_rootCA_pem[];
     
-	rt = iot_tls_init(&network, &(const TLSConnectParams){
+	rt = network_tls_init(&network, &(const TLSConnectParams){
             .pRootCALocation = tuya_rootCA_pem,
             .pDestinationURL = request->host,
             .DestinationPort = request->port,
@@ -445,16 +445,16 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     });
 
 	if (OPRT_OK != rt) {
-		TY_LOGE("iot_tls_init fail:%d", rt);
+		TY_LOGE("network_tls_init fail:%d", rt);
         system_free(path_buffer);
         system_free(body_buffer);
 		return rt;
 	}
 
     /* Start TLS connect */
-    rt = iot_tls_connect(&network, NULL);
+    rt = network_tls_connect(&network, NULL);
     if (OPRT_OK != rt) {
-		TY_LOGE("iot_tls_connect fail:%d", rt);
+		TY_LOGE("network_tls_connect fail:%d", rt);
         system_free(path_buffer);
         system_free(body_buffer);
 		return rt;
@@ -464,8 +464,8 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     /* http client TransportInterface */
     TransportInterface_t pTransportInterface = {
         .pNetworkContext = (NetworkContext_t*)&network,
-        .recv = (TransportRecv_t)iot_tls_read,
-        .send = (TransportSend_t)iot_tls_write
+        .recv = (TransportRecv_t)network_tls_read,
+        .send = (TransportSend_t)network_tls_write
     };
 
     /* http client request object make */
@@ -508,12 +508,12 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
                             body_length,
                             &http_response);
 
-    if (OPRT_OK != iot_tls_disconnect(&network)) {
-		TY_LOGW("iot_tls_disconnect fail:%d", rt);
+    if (OPRT_OK != network_tls_disconnect(&network)) {
+		TY_LOGW("network_tls_disconnect fail:%d", rt);
 	}
 
-    if (OPRT_OK != iot_tls_destroy(&network)) {
-		TY_LOGW("iot_tls_destroy fail:%d", rt);
+    if (OPRT_OK != network_tls_destroy(&network)) {
+		TY_LOGW("network_tls_destroy fail:%d", rt);
 	}
 
     /* Release http buffer */
