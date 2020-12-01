@@ -28,7 +28,7 @@ void hardware_switch_set(bool value)
 }
  
 /* DP data reception processing function */
-void tuya_iot_dp_download(tuya_iot_client_t* client, const char* json_dps)
+void user_dp_download_on(tuya_iot_client_t* client, const char* json_dps)
 {
     TY_LOGD("Data point download value:%s", json_dps);
  
@@ -54,15 +54,25 @@ void tuya_iot_dp_download(tuya_iot_client_t* client, const char* json_dps)
     /* Report the received data to synchronize the switch status. */
     tuya_iot_dp_report_json(client, json_dps);
 }
+
+/* Tuya OTA event callback */
+void user_upgrade_notify_on(tuya_iot_client_t* client, cJSON* upgrade)
+{
+    TY_LOGI("----- Upgrade information -----");
+    TY_LOGI("OTA Channel: %d", cJSON_GetObjectItem(upgrade, "type")->valueint);
+    TY_LOGI("Version: %s",     cJSON_GetObjectItem(upgrade, "version")->valuestring);
+    TY_LOGI("Size: %s",        cJSON_GetObjectItem(upgrade, "size")->valuestring);
+    TY_LOGI("MD5: %s",         cJSON_GetObjectItem(upgrade, "md5")->valuestring);
+    TY_LOGI("HMAC: %s",        cJSON_GetObjectItem(upgrade, "hmac")->valuestring);
+    TY_LOGI("URL: %s",         cJSON_GetObjectItem(upgrade, "url")->valuestring);
+    TY_LOGI("HTTPS URL: %s",   cJSON_GetObjectItem(upgrade, "httpsUrl")->valuestring);
+}
  
 /* Tuya SDK event callback */
 static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* event)
 {
+    TY_LOGD("Tuya Event ID:%d(%s)", event->id, EVENT_ID2STR(event->id));
     switch(event->id){
-    case TUYA_EVENT_DP_RECEIVE:
-        tuya_iot_dp_download(client, (const char*)event->data);
-        break;
- 
     case TUYA_EVENT_BIND_START:
         /* Print the QRCode for Tuya APP bind */
         example_qrcode_print(client->config.productkey, client->config.uuid);
@@ -70,8 +80,17 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
  
     case TUYA_EVENT_MQTT_CONNECTED:
         TY_LOGI("Device MQTT Connected!");
+        tuya_iot_version_update_sync(client);
+        break;
+
+    case TUYA_EVENT_DP_RECEIVE:
+        user_dp_download_on(client, (const char*)event->value.asString);
         break;
  
+    case TUYA_EVENT_UPGRADE_NOTIFY:
+        user_upgrade_notify_on(client, event->value.asJSON);
+        break;
+
     default:
         break;
     }

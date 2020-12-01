@@ -38,12 +38,6 @@ typedef enum {
     STATE_RESET,
     STATE_STOP,
     STATE_EXIT,
-
-    STATE_OTA_MODE,
-    STATE_OTA_MODE_START,
-    STATE_OTA_MODE_RUNING,
-    STATE_OTA_MODE_EXIT,
-
 } tuya_run_state_t;
 
 
@@ -165,20 +159,19 @@ static int activate_response_parse(atop_base_response_t* response)
         //目前只有判断APP恢复出厂模式,但是本地简单移除配网信息,那么告知用户
         if(cloud_reset_factory == TRUE) {
             TY_LOGD("remote is reset factory and local is not,reset factory again.");
-            client->event.data = (void*)GW_RESET_DATA_FACTORY;
             client->event.id = TUYA_EVENT_RESET;
+            client->event.value.asInteger = TUYA_RESET_TYPE_DATA_FACTORY;
             iot_dispatch_event(client);
         }
     }
 
-    // netfcg_state switch to complete;
     return OPRT_OK;
 }
 
 static int client_activate_process(tuya_iot_client_t* client, const char* token)
 {
     /* acvitive request instantiate construct */
-    device_activite_params_t activite_request = {
+    tuya_activite_request_t activite_request = {
         .token = (const char*)token,
         .product_key = client->config.productkey,
         .uuid = client->config.uuid,
@@ -194,7 +187,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
     atop_base_response_t response = {0};
 
     /* start activate request send */
-    int rt = tuya_device_activate_request(&activite_request, &response);
+    int rt = atop_service_activate_request(&activite_request, &response);
     if (OPRT_OK != rt) {
         TY_LOGE("http active error:%d", rt);
         client->state = STATE_RESTART;
@@ -234,15 +227,15 @@ static void mqtt_service_dp_receive_on(tuya_mqtt_event_t* ev)
 
     /* Send DP string format event*/
     client->event.id = TUYA_EVENT_DP_RECEIVE;
-    client->event.data = dps_string;
-    client->event.length = strlen(dps_string);
+    client->event.type = TUYA_DATE_TYPE_STRING;
+    client->event.value.asString = dps_string;
     iot_dispatch_event(client);
     system_free(dps_string);
 
     /* Send DP cJSON format event*/
     client->event.id = TUYA_EVENT_DP_RECEIVE_CJSON;
-    client->event.data = cJSON_GetObjectItem(data, "dps");
-    client->event.length = 0;
+    client->event.type = TUYA_DATE_TYPE_JSON;
+    client->event.value.asJSON = cJSON_GetObjectItem(data, "dps");
     iot_dispatch_event(client);
 }
 
@@ -259,19 +252,48 @@ static void mqtt_service_reset_cmd_on(tuya_mqtt_event_t* ev)
 
     /* DP event send */
     client->event.id = TUYA_EVENT_RESET;
+    client->event.type = TUYA_DATE_TYPE_INTEGER;
 
     if (cJSON_GetObjectItem(data, "type") && \
         strcmp(cJSON_GetObjectItem(data, "type")->valuestring, "reset_factory") == 0)  {
         TY_LOGD("cmd is reset factory, ungister");
-        client->event.data = (void*)GW_REMOTE_RESET_FACTORY;
+        client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_FACTORY;
     } else {
         TY_LOGD("unactive");
-        client->event.data = (void*)GW_REMOTE_UNACTIVE;
+        client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_UNACTIVE;
     }
     iot_dispatch_event(client);
 
     client->state = STATE_RESET;
     TY_LOGI("STATE_RESET...");
+}
+
+static void mqtt_service_upgrade_notify_on(tuya_mqtt_event_t* ev)
+{
+    tuya_iot_client_t* client = ev->user_data;
+    cJSON* data = (cJSON*)(ev->data);
+    if (NULL == cJSON_GetObjectItem(data, "gwId")) {
+        TY_LOGE("not found gatway ID");
+        return;
+    }
+
+    /* atop response instantiate construct */
+    atop_base_response_t response = {0};
+
+    int rt = atop_service_upgrade_info_get_v44(cJSON_GetObjectItem(data, "gwId")->valuestring, client->activate.seckey, 0, &response);
+    if (rt != OPRT_OK) {
+        TY_LOGE("upgrade info get error:%d", rt);
+        return;
+    }
+
+    /* Send DP cJSON format event*/
+    client->event.id = TUYA_EVENT_UPGRADE_NOTIFY;
+    client->event.type = TUYA_DATE_TYPE_JSON;
+    client->event.value.asJSON = response.result;
+    iot_dispatch_event(client);
+
+    /* Free response */
+    atop_base_response_free(&response);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -295,6 +317,9 @@ static int run_state_startup_update(tuya_iot_client_t* client)
 
     /* TODO result process*/
     atop_base_response_free(&response);
+
+    /* Update client version */
+    tuya_iot_version_update_sync(client);
 
     return rt;
 }
@@ -329,6 +354,7 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
     /* callback register */
     tuya_mqtt_protocol_register(&client->mqctx, PRO_CMD, mqtt_service_dp_receive_on, client);
     tuya_mqtt_protocol_register(&client->mqctx, PRO_GW_RESET, mqtt_service_reset_cmd_on, client);
+    tuya_mqtt_protocol_register(&client->mqctx, PRO_UPGD_REQ, mqtt_service_upgrade_notify_on, client);
 
     return rt;
 }
@@ -418,7 +444,8 @@ int tuya_iot_reset(tuya_iot_client_t *client)
     }
 
     client->event.id = TUYA_EVENT_RESET;
-    client->event.data = (void*)GW_LOCAL_RESET_FACTORY;
+    client->event.type = TUYA_DATE_TYPE_INTEGER;
+    client->event.value.asInteger = TUYA_RESET_TYPE_FACTORY;
     iot_dispatch_event(client);
     client->state = STATE_RESET;
     return ret;
@@ -431,6 +458,10 @@ int tuya_iot_destroy(tuya_iot_client_t* client)
 
 int tuya_iot_yield(tuya_iot_client_t* client)
 {
+    if (client == NULL) {
+        return OPRT_INVALID_PARM;
+    }
+
     int ret = OPRT_OK;
     switch (client->state) {
     case STATE_MQTT_YIELD:
@@ -467,6 +498,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
         /* Send Bind event to user program */
         client->event.id = TUYA_EVENT_BIND_START;
+        client->event.type = TUYA_DATE_TYPE_UNDEFINED;
         iot_dispatch_event(client);
 
         if (client->token_get(&client->config, client->token) == OPRT_OK) {
@@ -474,8 +506,8 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
             /* DP event send */
             client->event.id = TUYA_EVENT_BIND_TOKEN_ON;
-            client->event.data = client->token;
-            client->event.length = strlen(client->token);
+            client->event.type = TUYA_DATE_TYPE_STRING;
+            client->event.value.asString = client->token;
             iot_dispatch_event(client);
 
             /* Take token go to activate */
@@ -486,14 +518,25 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     case STATE_ACTIVATING:
         ret = client_activate_process(client, client->token);
         if (OPRT_OK == ret) {
+            /* DP event send */
             client->event.id = TUYA_EVENT_ACTIVATE_SUCCESSED;
+            client->event.type = TUYA_DATE_TYPE_UNDEFINED;
             iot_dispatch_event(client);
+
+            /* Retry to load activate */
             client->state = STATE_DATA_LOAD;
         }
         break;
 
     case STATE_STARTUP_UPDATE:
         if (run_state_startup_update(client) == OPRT_LINK_CORE_HTTP_GW_NOT_EXIST) {
+            /* DP event send */
+            client->event.id = TUYA_EVENT_RESET;
+            client->event.type = TUYA_DATE_TYPE_INTEGER;
+            client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_UNACTIVE;
+            iot_dispatch_event(client);
+
+            /* Reset activated data */
             client->state = STATE_RESET;
             break;
         }
@@ -511,6 +554,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
             /* DP event send */
             client->event.id = TUYA_EVENT_MQTT_CONNECTED;
+            client->event.type = TUYA_DATE_TYPE_UNDEFINED;
             iot_dispatch_event(client);
 
             client->state = STATE_MQTT_YIELD;
@@ -544,6 +588,10 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
 bool tuya_iot_activated(tuya_iot_client_t* client)
 {
+    if (client == NULL) {
+        return OPRT_INVALID_PARM;
+    }
+
     if (client->state == STATE_MQTT_YIELD) {
         return true;
     }
@@ -577,7 +625,41 @@ int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps)
     return rt;
 }
 
-void tuya_iot_token_get_port_register(tuya_iot_client_t* client, tuya_activate_token_get_t token_get_func)
+int tuya_iot_token_get_port_register(tuya_iot_client_t* client, tuya_activate_token_get_t token_get_func)
 {
+    if (client == NULL || token_get_func == NULL) {
+        return OPRT_INVALID_PARM;
+    }
     client->token_get = token_get_func;
+    return OPRT_OK;
+}
+
+int tuya_iot_version_update_sync(tuya_iot_client_t* client)
+{
+    if (client == NULL) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+
+    #define VERSION_BUFFER_MAX (128)
+    char* version_buffer = system_malloc(VERSION_BUFFER_MAX);
+    if (version_buffer == NULL) {
+        return OPRT_INVALID_PARM;
+    }
+
+    /* Format version JSON buffer */
+    snprintf(version_buffer, VERSION_BUFFER_MAX, 
+        "[{\\\"otaChannel\\\":%d,\\\"protocolVer\\\":\\\"%s\\\",\\\"baselineVer\\\":\\\"%s\\\",\\\"softVer\\\":\\\"%s\\\"}]", 
+        0, PV_VERSION, BS_VERSION, client->config.software_ver);
+
+    /* Post version info to ATOP service */
+    atop_base_response_t response = {0};
+    rt = atop_service_version_update_v41(client->activate.devid, client->activate.seckey, 
+                                        (const char*)version_buffer, &response);
+    
+    /* Release memory */
+    system_free(version_buffer);
+    atop_base_response_free(&response);
+    return rt;
 }
