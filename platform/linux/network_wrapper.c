@@ -51,7 +51,7 @@ struct tls_context {
 /*
  * This is a function to do further verification if needed on the cert received
  */
-static int _iot_tls_verify_cert(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *flags) {
+static int _network_tls_verify_cert(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *flags) {
 	char buf[1024];
 	((void) data);
 
@@ -69,17 +69,17 @@ static int _iot_tls_verify_cert(void *data, mbedtls_x509_crt *crt, int depth, ui
 	return 0;
 }
 
-int iot_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *params)
+int network_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *params)
 {
 	if (NULL == pNetwork) {
 		return OPRT_INVALID_PARM;
 	}
 
-	pNetwork->connect = iot_tls_connect;
-	pNetwork->read = iot_tls_read;
-	pNetwork->write = iot_tls_write;
-	pNetwork->disconnect = iot_tls_disconnect;
-	pNetwork->destroy = iot_tls_destroy;
+	pNetwork->connect = network_tls_connect;
+	pNetwork->read = network_tls_read;
+	pNetwork->write = network_tls_write;
+	pNetwork->disconnect = network_tls_disconnect;
+	pNetwork->destroy = network_tls_destroy;
 	pNetwork->tlsConnectParams = *params;
 
 	tls_context_t* tls_ctx = mbedtls_calloc(1, sizeof(tls_context_t));
@@ -93,11 +93,11 @@ int iot_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *params)
 	return OPRT_OK;
 }
 
-int iot_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *params)
+int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *params)
 {
 	int ret = 0;
 	tls_context_t *tlsDataParams = NULL;
-	const char *pers = "iot_tls_wrapper";
+	const char *pers = "network_tls_wrapper";
 	char portBuffer[6];
 
 	if(NULL == pNetwork) {
@@ -188,7 +188,7 @@ int iot_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *params)
 		return OPRT_MID_TLS_CONNECTION_ERROR;
 	}
 
-	mbedtls_ssl_conf_verify(&(tlsDataParams->conf), _iot_tls_verify_cert, NULL);
+	mbedtls_ssl_conf_verify(&(tlsDataParams->conf), _network_tls_verify_cert, NULL);
 	if(pNetwork->tlsConnectParams.ServerVerificationFlag == true) {
 		mbedtls_ssl_conf_authmode(&(tlsDataParams->conf), MBEDTLS_SSL_VERIFY_REQUIRED);
 	} else {
@@ -271,7 +271,7 @@ int iot_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *params)
 	return ret;
 }
 
-int iot_tls_disconnect(NetworkContext_t *pNetwork) {
+int network_tls_disconnect(NetworkContext_t *pNetwork) {
 	int ret = 0;
 	tls_context_t *tlsDataParams = (tls_context_t*)(pNetwork->context);
 
@@ -295,7 +295,7 @@ int iot_tls_disconnect(NetworkContext_t *pNetwork) {
 	return OPRT_OK;
 }
 
-int iot_tls_destroy(NetworkContext_t *pNetwork)
+int network_tls_destroy(NetworkContext_t *pNetwork)
 {
 	tls_context_t *tlsDataParams = (pNetwork->context);
 
@@ -314,7 +314,7 @@ static int mbedtls_status_is_ssl_in_progress( int ret )
             ret == MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS );
 }
 
-int iot_tls_write(NetworkContext_t *pNetwork, const unsigned char *pMsg, size_t len)
+int network_tls_write(NetworkContext_t *pNetwork, const unsigned char *pMsg, size_t len)
 {
 	tls_context_t *tlsDataParams = (tls_context_t*)(pNetwork->context);
 	int rv = mbedtls_ssl_write(&(tlsDataParams->ssl), pMsg, len);
@@ -327,7 +327,7 @@ int iot_tls_write(NetworkContext_t *pNetwork, const unsigned char *pMsg, size_t 
     return rv;
 }
 
-int iot_tls_read(NetworkContext_t *pNetwork, unsigned char *pMsg, size_t len)
+int network_tls_read(NetworkContext_t *pNetwork, unsigned char *pMsg, size_t len)
 {
 	tls_context_t *tlsDataParams = (tls_context_t*)(pNetwork->context);
 	int rv = mbedtls_ssl_read(&(tlsDataParams->ssl), pMsg, len);

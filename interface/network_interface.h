@@ -75,7 +75,7 @@ struct NetworkContext {
  *
  * @return int - successful initialization or TLS error
  */
-int iot_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *TLSParams);
+int network_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *TLSParams);
 
 /**
  * @brief Create a TLS socket and open the connection
@@ -87,7 +87,7 @@ int iot_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *TLSParams);
  * 					  Optional parameter. If set to NULL, use the initialization parameter to connect.
  * @return int - successful connection or TLS error
  */
-int iot_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *TLSParams);
+int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *TLSParams);
 
 /**
  * @brief Disconnect from network socket
@@ -95,7 +95,7 @@ int iot_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *TLSParam
  * @param NetworkContext_t - Pointer to a NetworkContext_t struct defining the network interface.
  * @return int - successful read or TLS error code
  */
-int iot_tls_disconnect(NetworkContext_t *pNetwork);
+int network_tls_disconnect(NetworkContext_t *pNetwork);
 
 /**
  * @brief Perform any tear-down or cleanup of TLS layer
@@ -105,7 +105,7 @@ int iot_tls_disconnect(NetworkContext_t *pNetwork);
  * @param NetworkContext_t - Pointer to a NetworkContext_t struct defining the network interface
  * @return int - successful cleanup or TLS error code
  */
-int iot_tls_destroy(NetworkContext_t *pNetwork);
+int network_tls_destroy(NetworkContext_t *pNetwork);
 
 /**
  * @brief Write bytes to the network socket
@@ -116,7 +116,7 @@ int iot_tls_destroy(NetworkContext_t *pNetwork);
  * @return integer - number of bytes written or TLS error
  * @return int - successful write length or TLS error code
  */
-int iot_tls_write(NetworkContext_t *pNetwork, const unsigned char *pMsg, size_t len);
+int network_tls_write(NetworkContext_t *pNetwork, const unsigned char *pMsg, size_t len);
 
 /**
  * @brief Read bytes from the network socket
@@ -127,7 +127,7 @@ int iot_tls_write(NetworkContext_t *pNetwork, const unsigned char *pMsg, size_t 
  * @param size_t - pointer to store number of bytes read
  * @return int - successful read length or TLS error code
  */
-int iot_tls_read(NetworkContext_t *pNetwork, unsigned char *pMsg, size_t len);
+int network_tls_read(NetworkContext_t *pNetwork, unsigned char *pMsg, size_t len);
 
 
 #ifdef __cplusplus
