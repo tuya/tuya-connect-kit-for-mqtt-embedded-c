@@ -71,11 +71,11 @@ typedef enum {
 } tuya_client_status_t;
 
 typedef enum {
-    GW_LOCAL_RESET_FACTORY = 0,
-    GW_REMOTE_UNACTIVE, //解除绑定
-    GW_LOCAL_UNACTIVE,
-    GW_REMOTE_RESET_FACTORY, //解除并清除数据
-    GW_RESET_DATA_FACTORY, //need clear local data when active
+    TUYA_RESET_TYPE_FACTORY,
+    TUYA_RESET_TYPE_REMOTE_UNACTIVE,
+    TUYA_RESET_TYPE_LOCAL_UNACTIVE,
+    TUYA_RESET_TYPE_REMOTE_FACTORY,
+    TUYA_RESET_TYPE_DATA_FACTORY,
 } tuya_reset_type_t;
 
 typedef enum {

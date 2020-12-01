@@ -160,7 +160,7 @@ static int activate_response_parse(atop_base_response_t* response)
         if(cloud_reset_factory == TRUE) {
             TY_LOGD("remote is reset factory and local is not,reset factory again.");
             client->event.id = TUYA_EVENT_RESET;
-            client->event.value.asInteger = GW_RESET_DATA_FACTORY;
+            client->event.value.asInteger = TUYA_RESET_TYPE_DATA_FACTORY;
             iot_dispatch_event(client);
         }
     }
@@ -257,10 +257,10 @@ static void mqtt_service_reset_cmd_on(tuya_mqtt_event_t* ev)
     if (cJSON_GetObjectItem(data, "type") && \
         strcmp(cJSON_GetObjectItem(data, "type")->valuestring, "reset_factory") == 0)  {
         TY_LOGD("cmd is reset factory, ungister");
-        client->event.value.asInteger = GW_REMOTE_RESET_FACTORY;
+        client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_FACTORY;
     } else {
         TY_LOGD("unactive");
-        client->event.value.asInteger = GW_REMOTE_UNACTIVE;
+        client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_UNACTIVE;
     }
     iot_dispatch_event(client);
 
@@ -445,7 +445,7 @@ int tuya_iot_reset(tuya_iot_client_t *client)
 
     client->event.id = TUYA_EVENT_RESET;
     client->event.type = TUYA_DATE_TYPE_INTEGER;
-    client->event.value.asInteger = GW_LOCAL_RESET_FACTORY;
+    client->event.value.asInteger = TUYA_RESET_TYPE_FACTORY;
     iot_dispatch_event(client);
     client->state = STATE_RESET;
     return ret;
@@ -530,6 +530,13 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
     case STATE_STARTUP_UPDATE:
         if (run_state_startup_update(client) == OPRT_LINK_CORE_HTTP_GW_NOT_EXIST) {
+            /* DP event send */
+            client->event.id = TUYA_EVENT_RESET;
+            client->event.type = TUYA_DATE_TYPE_INTEGER;
+            client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_UNACTIVE;
+            iot_dispatch_event(client);
+
+            /* Reset activated data */
             client->state = STATE_RESET;
             break;
         }
