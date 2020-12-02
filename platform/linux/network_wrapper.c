@@ -19,10 +19,6 @@ extern "C" {
 #include "mbedtls/debug.h"
 #include "mbedtls/timing.h"
 
-
-/* This is the value used for ssl read timeout */
-#define IOT_SSL_READ_TIMEOUT 2000
-
 /* This defines the value of the debug buffer that gets allocated.
  * The value can be altered based on memory constraints
  */
@@ -318,7 +314,7 @@ int network_tls_write(NetworkContext_t *pNetwork, const unsigned char *pMsg, siz
 {
 	tls_context_t *tlsDataParams = (tls_context_t*)(pNetwork->context);
 	int rv = mbedtls_ssl_write(&(tlsDataParams->ssl), pMsg, len);
-    if (rv <= 0) {
+    if (rv < 0) {
         if (mbedtls_status_is_ssl_in_progress(rv)) {
             return 0;
         }
@@ -331,7 +327,7 @@ int network_tls_read(NetworkContext_t *pNetwork, unsigned char *pMsg, size_t len
 {
 	tls_context_t *tlsDataParams = (tls_context_t*)(pNetwork->context);
 	int rv = mbedtls_ssl_read(&(tlsDataParams->ssl), pMsg, len);
-    if (rv <= 0) {
+    if (rv < 0) {
         if (mbedtls_status_is_ssl_in_progress(rv)) {
             return 0;
         }
