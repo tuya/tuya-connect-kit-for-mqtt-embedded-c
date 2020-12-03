@@ -57,7 +57,7 @@ static int iot_dispatch_event(tuya_iot_client_t* client)
 /*                            Activate data process                           */
 /* -------------------------------------------------------------------------- */
 
-static int activate_json_string_parse(const char* str, activated_params_t* out)
+static int activate_json_string_parse(const char* str, tuya_activated_data_t* out)
 {
     cJSON* root = cJSON_Parse(str);
     if (NULL == root) {
@@ -81,7 +81,7 @@ static int activate_json_string_parse(const char* str, activated_params_t* out)
     return OPRT_OK;
 }
 
-static int activated_data_read(const char* storage_key, activated_params_t* out)
+static int activated_data_read(const char* storage_key, tuya_activated_data_t* out)
 {
     int rt = OPRT_OK;
     size_t readlen = ACTIVATE_MAXLEN;
@@ -486,7 +486,11 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
         /* If the reading fails, enter the pending activation mode. */
         TY_LOGI("Activation data read fail, go activation mode...");
-        memset(client->token, 0, MAX_LENGTH_TOKEN);
+        client->binding = system_calloc(1, sizeof(tuya_binding_info_t));
+        if (client->binding == NULL) {
+            TY_LOGE("binding calloc error");
+            break;
+        }
         client->state = STATE_TOKEN_PENDING;
         break;
 
@@ -501,43 +505,48 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         client->event.type = TUYA_DATE_TYPE_UNDEFINED;
         iot_dispatch_event(client);
 
-        if (client->token_get(&client->config, client->token) == OPRT_OK) {
-            TY_LOGI("token on: %s", client->token);
+        if (client->token_get(&client->config, client->binding) == OPRT_OK) {
+            TY_LOGI("token: %s", client->binding->token);
+            TY_LOGI("region: %s", client->binding->region);
+            TY_LOGI("regist_key: %s", client->binding->regist_key);
 
             /* DP event send */
             client->event.id = TUYA_EVENT_BIND_TOKEN_ON;
             client->event.type = TUYA_DATE_TYPE_STRING;
-            client->event.value.asString = client->token;
+            client->event.value.asString = client->binding->token;
             iot_dispatch_event(client);
-
+            
             /* Take token go to activate */
             client->state = STATE_ACTIVATING;
         }
         break;
 
     case STATE_ACTIVATING:
-        ret = client_activate_process(client, client->token);
+        ret = client_activate_process(client, client->binding->token);
         if (OPRT_OK == ret) {
+            system_free(client->binding);
+            client->binding = NULL;
+
+            /* Retry to load activate */
+            client->state = STATE_DATA_LOAD;
+
             /* DP event send */
             client->event.id = TUYA_EVENT_ACTIVATE_SUCCESSED;
             client->event.type = TUYA_DATE_TYPE_UNDEFINED;
             iot_dispatch_event(client);
-
-            /* Retry to load activate */
-            client->state = STATE_DATA_LOAD;
         }
         break;
 
     case STATE_STARTUP_UPDATE:
         if (run_state_startup_update(client) == OPRT_LINK_CORE_HTTP_GW_NOT_EXIST) {
+            /* Reset activated data */
+            client->state = STATE_RESET;
+
             /* DP event send */
             client->event.id = TUYA_EVENT_RESET;
             client->event.type = TUYA_DATE_TYPE_INTEGER;
             client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_UNACTIVE;
             iot_dispatch_event(client);
-
-            /* Reset activated data */
-            client->state = STATE_RESET;
             break;
         }
         client->state = STATE_MQTT_CONNECT_START;
@@ -551,13 +560,12 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     case STATE_MQTT_CONNECTING:
         if (tuya_mqtt_connected(&client->mqctx)) {
             TY_LOGI("Tuya MQTT connected.");
+            client->state = STATE_MQTT_YIELD;
 
             /* DP event send */
             client->event.id = TUYA_EVENT_MQTT_CONNECTED;
             client->event.type = TUYA_DATE_TYPE_UNDEFINED;
             iot_dispatch_event(client);
-
-            client->state = STATE_MQTT_YIELD;
         }
         break;
 

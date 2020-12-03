@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-int mqtt_bind_token_get(const tuya_iot_config_t* config, char* token_out);
+int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* binding);
 
 #ifdef __cplusplus
 }

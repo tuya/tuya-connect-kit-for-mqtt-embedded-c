@@ -34,8 +34,10 @@ extern "C" {
 #define MAX_LENGTH_SECKEY      16
 #define MAX_LENGTH_LOCALKEY    16
 #define MAX_LENGTH_SCHEMA_ID   16
-#define MAX_LENGTH_TOKEN       10
 #define MAX_LENGTH_SW_VER      10   // max string length of VERSION
+#define MAX_LENGTH_TOKEN       8    // max string length of TOKEN
+#define MAX_LENGTH_REGION      2    // max string length of REGIN IN TOKEN
+#define MAX_LENGTH_REGIST      4    // max string length of REGIST_KEY IN TOKEN
 
 /* tuya sdk gateway reset type */
 typedef enum {
@@ -109,15 +111,6 @@ typedef struct tuya_iot_client_handle tuya_iot_client_t;
 typedef void (*event_handle_cb_t)(tuya_iot_client_t* client, tuya_event_msg_t* event);
 
 typedef struct {
-    char devid[MAX_LENGTH_DEVICE_ID + 1];
-    char seckey[MAX_LENGTH_SECKEY + 1];
-    char localkey[MAX_LENGTH_LOCALKEY + 1];
-    char schemaId[MAX_LENGTH_SCHEMA_ID + 1];
-    bool resetFactory;
-    int capability;
-} activated_params_t;
-
-typedef struct {
     const char* productkey;
     const char* uuid;
     const char* authkey;
@@ -125,17 +118,32 @@ typedef struct {
     event_handle_cb_t event_handler;
 } tuya_iot_config_t;
 
-typedef int (*tuya_activate_token_get_t)(const tuya_iot_config_t* config, char* token_out);
+typedef struct {
+    char devid[MAX_LENGTH_DEVICE_ID + 1];
+    char seckey[MAX_LENGTH_SECKEY + 1];
+    char localkey[MAX_LENGTH_LOCALKEY + 1];
+    char schemaId[MAX_LENGTH_SCHEMA_ID + 1];
+    bool resetFactory;
+    int capability;
+} tuya_activated_data_t;
+
+typedef struct {
+    char token[MAX_LENGTH_TOKEN + 1];
+    char region[MAX_LENGTH_REGION + 1];
+    char regist_key[MAX_LENGTH_REGIST + 1];
+} tuya_binding_info_t;
+
+typedef int (*tuya_activate_token_get_t)(const tuya_iot_config_t* config, tuya_binding_info_t* binding);
 
 struct tuya_iot_client_handle {
     tuya_iot_config_t config;
-    uint8_t state;
-    uint8_t retry_count;
-    tuya_event_msg_t event;
-    activated_params_t activate;
+    tuya_activated_data_t activate;
     tuya_mqtt_context_t mqctx;
+    tuya_event_msg_t event;
     tuya_activate_token_get_t token_get;
-    char token[MAX_LENGTH_TOKEN];
+    tuya_binding_info_t* binding;
+    uint8_t retry_count;
+    uint8_t state;
 };
 
 /**
