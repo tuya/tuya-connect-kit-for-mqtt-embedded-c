@@ -29,17 +29,34 @@ typedef enum {
 static void mqtt_bind_activate_token_on(tuya_mqtt_event_t* ev)
 {
     cJSON* data = (cJSON*)(ev->data);
-    char* token_buffer = (char*)(ev->user_data);
+    tuya_binding_info_t* binding = (tuya_binding_info_t*)(ev->user_data);
 
     if (NULL == cJSON_GetObjectItem(data, "token")) {
         TY_LOGE("not found token");
         return;
     }
 
+    if (NULL == cJSON_GetObjectItem(data, "region")) {
+        TY_LOGE("not found region");
+        return;
+    }
+
     /* get token from cJSON object */
     char* token = cJSON_GetObjectItem(data, "token")->valuestring;
-    TY_LOGI("token:%s", token);
-    strcpy(token_buffer, token);
+    char* region = cJSON_GetObjectItem(data, "region")->valuestring;
+
+    if (strlen(token) > MAX_LENGTH_TOKEN) {
+        TY_LOGE("token length error");
+        return;
+    }
+
+    if (strlen(region) > MAX_LENGTH_REGION) {
+        TY_LOGE("region length error");
+        return;
+    }
+
+    strcpy(binding->token, token);
+    strcpy(binding->region, region);
 }
 
 static int mqtt_bind_mode_start(tuya_mqtt_context_t* mqctx, const tuya_iot_config_t* config)
@@ -69,7 +86,7 @@ static int mqtt_bind_mode_start(tuya_mqtt_context_t* mqctx, const tuya_iot_confi
     return rt;
 }
 
-int mqtt_bind_token_get(const tuya_iot_config_t* config, char* token_out)
+int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* binding)
 {
     int ret = OPRT_OK;
     mqtt_bind_state_t mqtt_bind_state = STATE_MQTT_BIND_START;
@@ -83,7 +100,7 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, char* token_out)
             if (OPRT_OK == ret) {
                 /* register token callback */
                 tuya_mqtt_protocol_register(&mqctx, PRO_MQ_ACTIVE_TOKEN_ON, 
-                                mqtt_bind_activate_token_on, token_out);
+                                mqtt_bind_activate_token_on, binding);
                 mqtt_bind_state = STATE_MQTT_BIND_CONNECTED_WAIT;
             }
             break;
@@ -97,7 +114,7 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, char* token_out)
             break;
         
         case STATE_MQTT_BIND_TOKEN_WAIT:
-            if (strlen(token_out) == 0) {
+            if (strlen(binding->token) == 0) {
                 break;
             }
             mqtt_bind_state = STATE_MQTT_BIND_COMPLETE;

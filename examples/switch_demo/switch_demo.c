@@ -80,7 +80,6 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
  
     case TUYA_EVENT_MQTT_CONNECTED:
         TY_LOGI("Device MQTT Connected!");
-        tuya_iot_version_update_sync(client);
         break;
 
     case TUYA_EVENT_DP_RECEIVE:
