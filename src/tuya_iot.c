@@ -597,12 +597,21 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 bool tuya_iot_activated(tuya_iot_client_t* client)
 {
     if (client == NULL) {
-        return OPRT_INVALID_PARM;
+        return false;
     }
 
     if (client->state == STATE_MQTT_YIELD) {
         return true;
     }
+
+    if (strlen(client->activate.devid) > 0) {
+        return true;
+    }
+
+    if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
+        return true;
+    }
+
     return false;
 }
 
