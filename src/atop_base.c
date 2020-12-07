@@ -434,7 +434,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
 
     /* TLS pre init */
     NetworkContext_t network;
-    extern const unsigned char tuya_rootCA_pem[];
+    extern const char tuya_rootCA_pem[];
     
 	rt = network_tls_init(&network, &(const TLSConnectParams){
             .pRootCALocation = tuya_rootCA_pem,
