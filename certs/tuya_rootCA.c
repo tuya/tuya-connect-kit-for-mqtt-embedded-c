@@ -1,5 +1,5 @@
 
-const unsigned char tuya_rootCA_pem[] = {\
+const char tuya_rootCA_pem[] = {\
 "-----BEGIN CERTIFICATE-----\r\n"\
 "MIIHzjCCBrYCCQCGzYVuHuOuMzANBgkqhkiG9w0BAQsFADCCAqYxCzAJBgNVBAYT\r\n"\
 "AlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMREwDwYDVQQHDAhTYW4gSm9zZTEZMBcG\r\n"\

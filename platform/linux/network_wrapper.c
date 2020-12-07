@@ -123,7 +123,7 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 	}
 
 	log_debug("  . Loading the CA root certificate ...");
-	ret = mbedtls_x509_crt_parse(&(tlsDataParams->cacert), pNetwork->tlsConnectParams.pRootCALocation, 
+	ret = mbedtls_x509_crt_parse(&(tlsDataParams->cacert), (const unsigned char *)pNetwork->tlsConnectParams.pRootCALocation, 
 		strlen(pNetwork->tlsConnectParams.pRootCALocation) + 1);
 	if(ret < 0) {
 		log_error(" failed\n  !  mbedtls_x509_crt_parse returned -0x%x while parsing root cert\n\n", -ret);
@@ -133,8 +133,9 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 
 	if (pNetwork->tlsConnectParams.pDeviceCertLocation) {
 		log_debug("  . Loading the client cert. and key...");
-		ret = mbedtls_x509_crt_parse(&(tlsDataParams->clicert), pNetwork->tlsConnectParams.pDeviceCertLocation,
-										strlen(pNetwork->tlsConnectParams.pDeviceCertLocation) + 1);
+		ret = mbedtls_x509_crt_parse(&(tlsDataParams->clicert), 
+							(const unsigned char *)pNetwork->tlsConnectParams.pDeviceCertLocation,
+							strlen(pNetwork->tlsConnectParams.pDeviceCertLocation) + 1);
 		if(ret != 0) {
 			log_error(" failed\n  !  mbedtls_x509_crt_parse returned -0x%x while parsing device cert\n\n", -ret);
 			return OPRT_MID_TLS_X509_DEVICE_CRT_PARSE_ERROR;
@@ -142,8 +143,9 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 	}
 
 	if (pNetwork->tlsConnectParams.pDevicePrivateKeyLocation) {
-		ret = mbedtls_pk_parse_key(&(tlsDataParams->pkey), pNetwork->tlsConnectParams.pDevicePrivateKeyLocation, 
-									strlen(pNetwork->tlsConnectParams.pDevicePrivateKeyLocation) + 1, NULL, 0);
+		ret = mbedtls_pk_parse_key(&(tlsDataParams->pkey), 
+								(const unsigned char *)pNetwork->tlsConnectParams.pDevicePrivateKeyLocation, 
+								strlen(pNetwork->tlsConnectParams.pDevicePrivateKeyLocation) + 1, NULL, 0);
 		if(ret != 0) {
 			log_error(" failed\n  !  mbedtls_pk_parse_key returned -0x%x while parsing private key\n\n", -ret);
 			log_debug(" path : %s ", pNetwork->tlsConnectParams.pDevicePrivateKeyLocation);
