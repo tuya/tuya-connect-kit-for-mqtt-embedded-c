@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "tuya_config_defaults.h"
 #include "tuya_error_code.h"
 #include "tuya_iot.h"
 #include "tuya_log.h"
@@ -15,12 +16,7 @@
 #include "mqtt_bind.h"
 #include "cJSON.h"
 
-#define ACTIVATE_MAXLEN             (255)
-#define SCHEMA_MAXLEN               (4096)
-#define TOKEN_LEN_MIN               (8)
-#define MQTT_NETCFG_TIMEOUT         (5000)
-#define MQTT_RECV_TIMEOUT           (2000)
-#define MAX_LENGTH_ACTIVATE_BUFFER  (1024*8)
+#define ACTIVATE_KV_BUFFER         (255)
 
 extern const char tuya_rootCA_pem[];
 
@@ -84,8 +80,8 @@ static int activate_json_string_parse(const char* str, tuya_activated_data_t* ou
 static int activated_data_read(const char* storage_key, tuya_activated_data_t* out)
 {
     int rt = OPRT_OK;
-    size_t readlen = ACTIVATE_MAXLEN;
-    char* readbuf = system_calloc(sizeof(char), ACTIVATE_MAXLEN);
+    size_t readlen = ACTIVATE_KV_BUFFER;
+    char* readbuf = system_calloc(sizeof(char), ACTIVATE_KV_BUFFER);
     if (NULL == readbuf) {
         TY_LOGE("activate_string malloc fail.");
         return rt;
@@ -179,7 +175,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
         .sw_ver = client->config.software_ver,
         .bv = BS_VERSION,
         .pv = PV_VERSION,
-        .buflen_custom = MAX_LENGTH_ACTIVATE_BUFFER,
+        .buflen_custom = ACTIVATE_BUFFER_LENGTH,
         .user_data = client
     };
 
@@ -336,7 +332,7 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
         .devid = client->activate.devid,
         .seckey = client->activate.seckey,
         .localkey = client->activate.localkey,
-        .timeout = MQTT_RECV_TIMEOUT,
+        .timeout = MQTT_RECV_BLOCK_TIME_MS,
     });
     if (OPRT_OK != rt) {
         TY_LOGE("tuya mqtt init error:%d", rt);

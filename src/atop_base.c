@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include "tuya_log.h"
+#include "tuya_config_defaults.h"
 
 #include "system_interface.h"
 #include "network_interface.h"
@@ -19,7 +20,6 @@
 #define POST_DATA_PREFIX (5) // 'data='
 #define MAX_URL_LENGTH (255)
 #define HEADER_BUFFER_LENGTH (512)
-#define DEFAULT_HTTP_TIMEOUT (5000)
 #define DEFAULT_RESPONSE_BUFFER_LEN (1024)
 #define AES_BLOCK_SIZE (16)
 
@@ -459,7 +459,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
         system_free(body_buffer);
 		return rt;
 	}
-    log_debug("tls connencted!");
+    TY_LOGD("tls connencted!");
 
     /* http client TransportInterface */
     TransportInterface_t pTransportInterface = {

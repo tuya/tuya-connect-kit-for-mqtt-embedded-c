@@ -17,14 +17,13 @@
 #include "mqtt_service.h"
 
 enum {
-	MQTT_STATE_INIT,
 	MQTT_STATE_IDLE,
+	MQTT_STATE_CONNECT_RESET,
 	MQTT_STATE_TLS_CONNECTING,
 	MQTT_STATE_CONNECTING,
 	MQTT_STATE_CONNECTED,
+	MQTT_STATE_SUBSCRIBE,
 	MQTT_STATE_STOP,
-	MQTT_STATE_WAIT_CONNECTED_CONFIRM,
-	MQTT_STATE_WAIT_SUBSCRIBED_CONFIRM,
 	MQTT_STATE_YIELD,
 };
 
@@ -350,6 +349,9 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 	// rand
     context->sequence_out = rand() & 0xffff;
 	context->sequence_in = -1;
+
+	/* Wait start task */
+	context->state = MQTT_STATE_IDLE;
 	return OPRT_OK;
 }
 
@@ -510,31 +512,26 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 	MQTTStatus_t mqttStatus;
 
 	switch (context->state) {
-		case MQTT_STATE_INIT:
-			context->state = MQTT_STATE_IDLE;
+		case MQTT_STATE_IDLE:
 			break;
 
-		case MQTT_STATE_IDLE:
+		case MQTT_STATE_YIELD:
+			mqttStatus = MQTT_ProcessLoop( &context->mqclient, context->network.tlsConnectParams.TimeoutMs);
+			if( mqttStatus != MQTTSuccess ) {
+				TY_LOGE("MQTT_ProcessLoop returned with status = %s.", MQTT_Status_strerror( mqttStatus ));
+				context->network.disconnect(&context->network);
+				context->state = MQTT_STATE_TLS_CONNECTING;
+			}
 			break;
 		
 		case MQTT_STATE_TLS_CONNECTING:
 			rt = context->network.connect(&context->network, NULL);
-			if (OPRT_OK == rt) {
-
-			} else {
+			if (OPRT_OK != rt) {
 				context->network.disconnect(&context->network);
-			}
-
-			if (rt == 1) {
-				context->state = MQTT_STATE_CONNECTING;
-			} else if ( rt != 0) {
-				/* reset tls connect */
-				rt = context->network.disconnect(&context->network);
-			}
-
-			TY_LOGD("MQTT connected.");
+				break;
+			} 
+			TY_LOGD("TLS connected.");
 			context->state = MQTT_STATE_CONNECTING;
-			break;
 
 		case MQTT_STATE_CONNECTING: {
 			TY_LOGI("MQTT Connecting...");
@@ -557,14 +554,17 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 				&pSessionPresent );
 			if (MQTTSuccess != mqttStatus) {
 				TY_LOGE("mqtt connect err: %d", mqttStatus);
-				tuya_mqtt_reconnect(context);
+				context->state = MQTT_STATE_CONNECT_RESET;
 				break;
 			}
 			context->state = MQTT_STATE_CONNECTED;
-			break;
 		}
 
-		case MQTT_STATE_CONNECTED:{
+		case MQTT_STATE_CONNECTED:
+			context->state = MQTT_STATE_SUBSCRIBE;
+			TY_LOGD("MQTT connected!");
+
+		case MQTT_STATE_SUBSCRIBE:
 			mqttStatus = MQTT_Subscribe( &context->mqclient,
 										&(const MQTTSubscribeInfo_t){
 											.qos = MQTTQoS1,
@@ -575,32 +575,23 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 										MQTT_GetPacketId( &context->mqclient ) );
 
 			if( mqttStatus != MQTTSuccess ) {
-				TY_LOGE( "Failed to send SUBSCRIBE packet to broker with error = %s.",
-							MQTT_Status_strerror( mqttStatus ) );
-				rt = OPRT_COM_ERROR;
-			}
-			else {
-				TY_LOGI( "SUBSCRIBE sent for topic %s to broker.\n", context->signature.topic_in );
+				TY_LOGE( "Failed to send SUBSCRIBE packet to broker with error = %s.", 
+						MQTT_Status_strerror( mqttStatus ) );
+				context->state = MQTT_STATE_CONNECT_RESET;
+				break;
 			}
 
+			TY_LOGD("SUBSCRIBE sent for topic %s to broker.\n", context->signature.topic_in);
 			context->state = MQTT_STATE_YIELD;
 			break;
-		}
+
+		case MQTT_STATE_CONNECT_RESET:
+			context->network.disconnect(&context->network);
+			context->state = MQTT_STATE_TLS_CONNECTING;
+			break;
 
 		case MQTT_STATE_STOP:
 			context->state = MQTT_STATE_IDLE;
-			break;
-
-		case MQTT_STATE_YIELD:
-			mqttStatus = MQTT_ProcessLoop( &context->mqclient, context->network.tlsConnectParams.TimeoutMs );
-
-			if( mqttStatus != MQTTSuccess ) {
-				// TODO add error code
-				TY_LOGE( "MQTT_ProcessLoop returned with status = %s.",
-					MQTT_Status_strerror( mqttStatus ) );
-				context->network.disconnect(&context->network);
-				context->state = MQTT_STATE_TLS_CONNECTING;
-			}
 			break;
 
 		default:
