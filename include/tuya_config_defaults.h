@@ -11,11 +11,19 @@
 #endif
 
 /**
- * @brief mqtt socket recv blocking time.
+ * @brief MQTT socket recv blocking time.
  * 
  */
 #ifndef MQTT_RECV_BLOCK_TIME_MS
     #define MQTT_RECV_BLOCK_TIME_MS (2000U)
+#endif
+
+/**
+ * @brief MQTT keep alive period.
+ * 
+ */
+#ifndef MQTT_KEEPALIVE_INTERVALIN
+    #define MQTT_KEEPALIVE_INTERVALIN (60U)
 #endif
 
 /**

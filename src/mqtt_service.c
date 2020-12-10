@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "tuya_config_defaults.h"
 #include "tuya_log.h"
 #include "tuya_error_code.h"
 #include "system_interface.h"
@@ -15,6 +16,18 @@
 #include "aes_inf.h"
 #include "core_mqtt.h"
 #include "mqtt_service.h"
+
+// mqtt message package
+#define TUYA_MQTT_VER_LEN 3
+#define TUYA_MQTT_CRC32_LEN 4
+#define TUYA_MQTT_SEQUENCE_LEN 4
+#define TUYA_MQTT_SOURCE_LEN 4
+#define TUYA_MQTT_CRC32_OFFSET (0 + TUYA_MQTT_VER_LEN)
+#define TUYA_MQTT_SEQUENCE_OFFSET (TUYA_MQTT_CRC32_OFFSET + TUYA_MQTT_CRC32_LEN)
+#define TUYA_MQTT_SOURCE_OFFSET (TUYA_MQTT_SEQUENCE_OFFSET + TUYA_MQTT_SEQUENCE_LEN)
+#define TUYA_MQTT_DATA_OFFSET (TUYA_MQTT_SOURCE_OFFSET + TUYA_MQTT_SOURCE_LEN)
+#define MQTT_REPORT_FMT "{\"protocol\":%d,\"t\":%d,\"data\":%s}"
+#define MQTT_FMT_MAX (64)
 
 enum {
 	MQTT_STATE_IDLE,
