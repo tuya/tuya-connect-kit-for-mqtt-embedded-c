@@ -34,17 +34,6 @@ typedef struct mqtt_client mqtt_client_t;
 #define TUYA_MQTT_TOPIC_MAXLEN (64U)
 #define TUYA_MQTT_TOPIC_MAXLEN (64U)
 
-// mqtt message package
-#define TUYA_MQTT_VER_LEN 3
-#define TUYA_MQTT_CRC32_LEN 4
-#define TUYA_MQTT_SEQUENCE_LEN 4
-#define TUYA_MQTT_SOURCE_LEN 4
-#define TUYA_MQTT_CRC32_OFFSET (0 + TUYA_MQTT_VER_LEN)
-#define TUYA_MQTT_SEQUENCE_OFFSET (TUYA_MQTT_CRC32_OFFSET + TUYA_MQTT_CRC32_LEN)
-#define TUYA_MQTT_SOURCE_OFFSET (TUYA_MQTT_SEQUENCE_OFFSET + TUYA_MQTT_SEQUENCE_LEN)
-#define TUYA_MQTT_DATA_OFFSET (TUYA_MQTT_SOURCE_OFFSET + TUYA_MQTT_SOURCE_LEN)
-#define MQTT_REPORT_FMT "{\"protocol\":%d,\"t\":%d,\"data\":%s}"
-#define MQTT_FMT_MAX (64)
 
 // Tuya mqtt protocol
 #define PRO_DATA_PUSH               4   /* dev -> cloud push dp data */
@@ -88,7 +77,6 @@ typedef struct mqtt_client mqtt_client_t;
 #define PRO_DEV_ALARM_UP      		702 /* dev -> cloud */
 
 #define MQTT_EVENT_ID_MAX           6
-#define MQTT_KEEPALIVE_INTERVALIN   60
 
 typedef enum {
     TUYA_MQTT_EVENT_ERROR = 0,       /*!< This event occurs when there are any errors during execution */

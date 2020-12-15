@@ -67,9 +67,6 @@ Read from the TLS network buffer.
 `int network_tls_destroy(Network *pNetwork);`
 释放 TLS 连接上下文。
 
-`int network_tls_is_connected(Network *pNetwork);`
-检查 TLS 是否已经连接上。
-
 
 ### 数据持久化
 
