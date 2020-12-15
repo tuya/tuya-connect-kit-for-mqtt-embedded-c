@@ -23,7 +23,7 @@
 
 #define ATOP_DEFAULT_POST_BUFFER_LEN (128)
 
-#define ATOP_ACTIVATE_POST_FMT "{\"productKey\":\"%s\",\"token\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\",\"softVer\":\"%s\",\"t\":%d}"
+#define ATOP_ACTIVATE_POST_FMT "{\"productKey\":\"%s\",\"token\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\",\"cadVer\":\"1.0.3\",\"softVer\":\"%s\",\"t\":%d}"
 #define ATOP_ACTIVATE_API "tuya.device.active"
 #define ATOP_ACTIVATE_API_VERSION "4.3"
 
@@ -87,9 +87,9 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     return rt;
 }
 
-int atop_service_client_reset(const char* id, const char* key, atop_base_response_t* response)
+int atop_service_client_reset(const char* id, const char* key)
 {
-    if (NULL == id || NULL == key || NULL == response) {
+    if (NULL == id || NULL == key) {
         return OPRT_INVALID_PARM;
     }
 
@@ -122,13 +122,24 @@ int atop_service_client_reset(const char* id, const char* key, atop_base_respons
         .user_data = NULL
     };
 
+    atop_base_response_t response = {0};
+
     /* ATOP service request send */
-    rt = atop_base_request(&atop_request, response);
+    rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
+    
+    bool success = response.success;
+    atop_base_response_free(&response);
+    
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;
     }
+
+    if (success == false) {
+        return OPRT_COM_ERROR;
+    }
+
     return rt;
 }
 
@@ -238,9 +249,54 @@ int atop_service_upgrade_info_get_v44(const char* id, const char* key, int chann
     return rt;
 }
 
-int atop_service_upgrade_status_update_v41(const char* id, const char* key, int channel, int status, atop_base_response_t* response)
+int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop_base_response_t* response)
 {
     if (NULL == id || NULL == key || NULL == response) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+
+    /* post data */
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(ATOP_DEFAULT_POST_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"subId\":null,\"t\":%d}", system_timestamp());
+    TY_LOGV("POST JSON:%s", buffer);
+
+    /* atop_base_request object construct */
+    atop_base_request_t atop_request = {
+        .host = tuya_atop_server_host_get(),
+        .port = tuya_atop_server_port_get(),
+        .devid = id,
+        .key = key,
+        .path = "/d.json",
+        .timestamp = system_timestamp(),
+        .api = "tuya.device.upgrade.silent.get",
+        .version = "4.4",
+        .data = buffer,
+        .datalen = buffer_len,
+        .user_data = NULL,
+        .buflen_custom = 1024 * 2
+    };
+
+    /* ATOP service request send */
+    rt = atop_base_request(&atop_request, response);
+    system_free(buffer);
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_base_request error:%d", rt);
+        return rt;
+    }
+    return rt;
+}
+
+int atop_service_upgrade_status_update_v41(const char* id, const char* key, int channel, int status)
+{
+    if (NULL == id || NULL == key) {
         return OPRT_INVALID_PARM;
     }
 
@@ -273,19 +329,30 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
         .user_data = NULL,
     };
 
+    atop_base_response_t response = {0};
+
     /* ATOP service request send */
-    rt = atop_base_request(&atop_request, response);
+    rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
+    
+    bool success = response.success;
+    atop_base_response_free(&response);
+    
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;
     }
+
+    if (success == false) {
+        return OPRT_COM_ERROR;
+    }
+
     return rt;
 }
 
-int atop_service_version_update_v41(const char* id, const char* key, const char *versions, atop_base_response_t* response)
+int atop_service_version_update_v41(const char* id, const char* key, const char *versions)
 {
-    if (NULL == id || NULL == key || NULL == versions || NULL == response) {
+    if (NULL == id || NULL == key || NULL == versions) {
         return OPRT_INVALID_PARM;
     }
 
@@ -318,12 +385,23 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
         .user_data = NULL,
     };
 
+    atop_base_response_t response = {0};
+
     /* ATOP service request send */
-    rt = atop_base_request(&atop_request, response);
+    rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
+    
+    bool success = response.success;
+    atop_base_response_free(&response);
+    
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;
     }
+
+    if (success == false) {
+        return OPRT_COM_ERROR;
+    }
+
     return rt;
 }

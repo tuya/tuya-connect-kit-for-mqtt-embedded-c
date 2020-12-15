@@ -268,15 +268,17 @@ static void mqtt_service_upgrade_notify_on(tuya_mqtt_event_t* ev)
 {
     tuya_iot_client_t* client = ev->user_data;
     cJSON* data = (cJSON*)(ev->data);
-    if (NULL == cJSON_GetObjectItem(data, "gwId")) {
-        TY_LOGE("not found gatway ID");
-        return;
+    int ota_channel = 0;
+
+    if (cJSON_GetObjectItem(data, "firmwareType")) {
+        ota_channel = cJSON_GetObjectItem(data, "firmwareType")->valueint;
     }
 
     /* atop response instantiate construct */
     atop_base_response_t response = {0};
 
-    int rt = atop_service_upgrade_info_get_v44(cJSON_GetObjectItem(data, "gwId")->valuestring, client->activate.seckey, 0, &response);
+    int rt = atop_service_upgrade_info_get_v44(client->activate.devid, 
+                        client->activate.seckey, ota_channel, &response);
     if (rt != OPRT_OK) {
         TY_LOGE("upgrade info get error:%d", rt);
         return;
@@ -417,6 +419,9 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
 
 int tuya_iot_start(tuya_iot_client_t *client)
 {
+    if (client->state != STATE_IDLE) {
+        return OPRT_COM_ERROR;
+    }
     client->state = STATE_START;
     return OPRT_OK;
 }
@@ -431,12 +436,9 @@ int tuya_iot_reset(tuya_iot_client_t *client)
 {
     int ret = OPRT_OK;
     if (tuya_iot_activated(client)) {
-        atop_base_response_t response = {0};
         ret = atop_service_client_reset(
                 client->activate.devid, 
-                client->activate.seckey, 
-                &response);
-        atop_base_response_free(&response);
+                client->activate.seckey);
     }
 
     client->event.id = TUYA_EVENT_RESET;
@@ -667,12 +669,8 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
         0, PV_VERSION, BS_VERSION, client->config.software_ver);
 
     /* Post version info to ATOP service */
-    atop_base_response_t response = {0};
     rt = atop_service_version_update_v41(client->activate.devid, client->activate.seckey, 
-                                        (const char*)version_buffer, &response);
+                                        (const char*)version_buffer);
     
-    /* Release memory */
-    system_free(version_buffer);
-    atop_base_response_free(&response);
     return rt;
 }
