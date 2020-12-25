@@ -34,13 +34,13 @@ static int atop_url_params_sign(const char* key,
                                 url_param_t* params, int param_num,
                                 uint8_t* out, size_t* olen)
 {
-	int rt = OPRT_OK;
+    int rt = OPRT_OK;
     int printlen = 0;
     int i = 0;
     uint8_t digest[MD5SUM_LENGTH];
 
     char* buffer = system_malloc(512);
-	TUYA_CHECK_NULL_RETURN(buffer, OPRT_MALLOC_FAILED);
+    TUYA_CHECK_NULL_RETURN(buffer, OPRT_MALLOC_FAILED);
 
     for (i = 0; i < param_num; ++i) {
         printlen += sprintf(buffer + printlen, "%s=%s||", params[i].key, params[i].value);
@@ -49,7 +49,7 @@ static int atop_url_params_sign(const char* key,
 
     // make md5 digest bin
     uni_md5_digest_tolal((const uint8_t*)buffer, printlen, digest);
-	system_free(buffer);
+    system_free(buffer);
 
     // make digest hex
     for (i = 0; i < MD5SUM_LENGTH; i++) {
@@ -93,11 +93,11 @@ static int atop_request_data_encode(const char* key,
         return OPRT_INVALID_PARM;        
     }
 
-	int rt = OPRT_OK;
-	int printlen = 0;
+    int rt = OPRT_OK;
+    int printlen = 0;
     int i;
 
-	/* AES data PKCS7 padding */
+    /* AES data PKCS7 padding */
     uint8_t padding_value = AES_BLOCK_SIZE - ilen % AES_BLOCK_SIZE;
     size_t input_buffer_len = ilen + padding_value;
     uint8_t* input_buffer = system_malloc(input_buffer_len);
@@ -107,8 +107,8 @@ static int atop_request_data_encode(const char* key,
     }
 
     /* AES128-ECB encode */
-	uint8_t* encrypted_buffer = system_malloc(input_buffer_len);
-	size_t encrypted_len = input_buffer_len;
+    uint8_t* encrypted_buffer = system_malloc(input_buffer_len);
+    size_t encrypted_len = input_buffer_len;
 
     OPERATE_RET ret = aes128_ecb_encode_raw(input_buffer, input_buffer_len, encrypted_buffer, (const uint8_t*)key);
     system_free(input_buffer);
@@ -117,15 +117,15 @@ static int atop_request_data_encode(const char* key,
         return ret;
     }
 
-	// output the hex data
-	printlen = sprintf((char*)output, "%s", "data=");
-	for (i = 0; i < (int)encrypted_len; i++) {
-		printlen += sprintf((char*)output + printlen, "%02X", (uint8_t)(encrypted_buffer[i]));
-	}
+    // output the hex data
+    printlen = sprintf((char*)output, "%s", "data=");
+    for (i = 0; i < (int)encrypted_len; i++) {
+        printlen += sprintf((char*)output + printlen, "%02X", (uint8_t)(encrypted_buffer[i]));
+    }
 
     system_free(encrypted_buffer);
-	*olen = printlen;
-	return 0;
+    *olen = printlen;
+    return 0;
 }
 
 static int atop_response_result_decrpyt( const char* key,
@@ -136,7 +136,7 @@ static int atop_response_result_decrpyt( const char* key,
         return OPRT_INVALID_PARM;        
     }
 
-	int rt = OPRT_OK;
+    int rt = OPRT_OK;
 
     // AES decrypt
     rt = aes128_ecb_decode_raw(input, ilen, output, (const uint8_t*)key);
@@ -424,11 +424,11 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     /* POST data encode */
     TY_LOGD("atop_request_data_encode");
     rt = atop_request_data_encode((char*)request->key, request->data, request->datalen, body_buffer, &body_length);
-	if (rt != OPRT_OK) {
+    if (rt != OPRT_OK) {
         TY_LOGE("atop_post_data_encrypt error:%d", rt);
         system_free(path_buffer);
         system_free(body_buffer);
-		return rt;
+        return rt;
     }
     TY_LOGV("out post data len:%d, data:%s", body_length, body_buffer);
 
@@ -436,7 +436,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     NetworkContext_t network;
     extern const char tuya_rootCA_pem[];
     
-	rt = network_tls_init(&network, &(const TLSConnectParams){
+    rt = network_tls_init(&network, &(const TLSConnectParams){
             .pRootCALocation = tuya_rootCA_pem,
             .pDestinationURL = request->host,
             .DestinationPort = request->port,
@@ -444,21 +444,23 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
             .ServerVerificationFlag = true
     });
 
-	if (OPRT_OK != rt) {
-		TY_LOGE("network_tls_init fail:%d", rt);
+    if (OPRT_OK != rt) {
+        TY_LOGE("network_tls_init fail:%d", rt);
         system_free(path_buffer);
         system_free(body_buffer);
-		return rt;
-	}
+        return rt;
+    }
 
     /* Start TLS connect */
     rt = network_tls_connect(&network, NULL);
     if (OPRT_OK != rt) {
-		TY_LOGE("network_tls_connect fail:%d", rt);
+        TY_LOGE("network_tls_connect fail:%d", rt);
+        network_tls_disconnect(&network);
+        network_tls_destroy(&network);
         system_free(path_buffer);
         system_free(body_buffer);
-		return rt;
-	}
+        return rt;
+    }
     TY_LOGD("tls connencted!");
 
     /* http client TransportInterface */
@@ -495,7 +497,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
         system_free(body_buffer);
         return OPRT_MALLOC_FAILED;
     }
-    HTTPResponse_t http_response = { 
+    HTTPResponse_t http_response = {
         .pBuffer = response_buffer,
         .bufferLen = response_buffer_length
     };
@@ -509,12 +511,12 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
                             &http_response);
 
     if (OPRT_OK != network_tls_disconnect(&network)) {
-		TY_LOGW("network_tls_disconnect fail:%d", rt);
-	}
+        TY_LOGW("network_tls_disconnect fail:%d", rt);
+    }
 
     if (OPRT_OK != network_tls_destroy(&network)) {
-		TY_LOGW("network_tls_destroy fail:%d", rt);
-	}
+        TY_LOGW("network_tls_destroy fail:%d", rt);
+    }
 
     /* Release http buffer */
     system_free(path_buffer);
