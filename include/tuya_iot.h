@@ -144,6 +144,7 @@ struct tuya_iot_client_handle {
     tuya_binding_info_t* binding;
     uint8_t retry_count;
     uint8_t state;
+    uint8_t nextstate;
     bool is_activated;
 };
 
@@ -210,7 +211,7 @@ int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps);
  * 
  * @param client - The Tuya client context.
  * @param dps - DP JSON format e.g: "{"101":true}"
- * * @param time - time e.g: 
+ * @param time - time e.g: "{"101":1612324744}"
  * @return int - OPRT_OK successful or error code. 
  */
 int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps, const char* time);

@@ -186,7 +186,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
     int rt = atop_service_activate_request(&activite_request, &response);
     if (OPRT_OK != rt) {
         TY_LOGE("http active error:%d", rt);
-        client->state = STATE_RESTART;
+        client->nextstate = STATE_RESTART;
         return rt;
     }
 
@@ -260,7 +260,7 @@ static void mqtt_service_reset_cmd_on(tuya_mqtt_event_t* ev)
     }
     iot_dispatch_event(client);
 
-    client->state = STATE_RESET;
+    client->nextstate = STATE_RESET;
     TY_LOGI("STATE_RESET...");
 }
 
@@ -345,7 +345,7 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
     if (OPRT_OK != rt) {
         TY_LOGE("tuya mqtt start error:%d", rt);
         tuya_mqtt_destory(&client->mqctx);
-        client->state = STATE_RESTART;
+        client->nextstate = STATE_RESTART;
         return rt;
     }
 
@@ -419,6 +419,7 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
     }
 
     client->state = STATE_IDLE;
+    client->nextstate = STATE_IDLE;
     return ret;
 }
 
@@ -427,13 +428,13 @@ int tuya_iot_start(tuya_iot_client_t *client)
     if (client->state != STATE_IDLE) {
         return OPRT_COM_ERROR;
     }
-    client->state = STATE_START;
+    client->nextstate = STATE_START;
     return OPRT_OK;
 }
 
 int tuya_iot_stop(tuya_iot_client_t *client)
 {
-    client->state = STATE_STOP;
+    client->nextstate = STATE_STOP;
     return OPRT_OK;
 }
 
@@ -450,7 +451,7 @@ int tuya_iot_reset(tuya_iot_client_t *client)
     client->event.type = TUYA_DATE_TYPE_INTEGER;
     client->event.value.asInteger = TUYA_RESET_TYPE_FACTORY;
     iot_dispatch_event(client);
-    client->state = STATE_RESET;
+    client->nextstate = STATE_RESET;
     return ret;
 }
 
@@ -466,6 +467,8 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     }
 
     int ret = OPRT_OK;
+    client->state = client->nextstate;
+
     switch (client->state) {
     case STATE_MQTT_YIELD:
         break;
@@ -476,14 +479,14 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
     case STATE_START:
         TY_LOGD("STATE_START");
-        client->state = STATE_DATA_LOAD;
+        client->nextstate = STATE_DATA_LOAD;
         break;
 
     case STATE_DATA_LOAD:
         /* Try to read the local activation data. 
          * If the reading is successful, the device has been activated. */
         if (client->is_activated) {
-            client->state = STATE_STARTUP_UPDATE;
+            client->nextstate = STATE_STARTUP_UPDATE;
             break;
         }
 
@@ -494,7 +497,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
             TY_LOGE("binding calloc error");
             break;
         }
-        client->state = STATE_TOKEN_PENDING;
+        client->nextstate = STATE_TOKEN_PENDING;
         break;
 
     case STATE_TOKEN_PENDING:
@@ -520,7 +523,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
             iot_dispatch_event(client);
             
             /* Take token go to activate */
-            client->state = STATE_ACTIVATING;
+            client->nextstate = STATE_ACTIVATING;
         }
         break;
 
@@ -540,7 +543,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         }
 
         /* Retry to load activate */
-        client->state = STATE_DATA_LOAD;
+        client->nextstate = STATE_DATA_LOAD;
 
         /* DP event send */
         client->event.id = TUYA_EVENT_ACTIVATE_SUCCESSED;
@@ -551,7 +554,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     case STATE_STARTUP_UPDATE:
         if (run_state_startup_update(client) == OPRT_LINK_CORE_HTTP_GW_NOT_EXIST) {
             /* Reset activated data */
-            client->state = STATE_RESET;
+            client->nextstate = STATE_RESET;
 
             /* DP event send */
             client->event.id = TUYA_EVENT_RESET;
@@ -560,18 +563,18 @@ int tuya_iot_yield(tuya_iot_client_t* client)
             iot_dispatch_event(client);
             break;
         }
-        client->state = STATE_MQTT_CONNECT_START;
+        client->nextstate = STATE_MQTT_CONNECT_START;
         break;
 
     case STATE_MQTT_CONNECT_START:
         run_state_mqtt_connect_start(client);
-        client->state = STATE_MQTT_CONNECTING;
+        client->nextstate = STATE_MQTT_CONNECTING;
         break;
 
     case STATE_MQTT_CONNECTING:
         if (tuya_mqtt_connected(&client->mqctx)) {
             TY_LOGI("Tuya MQTT connected.");
-            client->state = STATE_MQTT_YIELD;
+            client->nextstate = STATE_MQTT_YIELD;
 
             /* DP event send */
             client->event.id = TUYA_EVENT_MQTT_CONNECTED;
@@ -582,17 +585,17 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
     case STATE_RESTART:
         run_state_restart(client);
-        client->state = STATE_START;
+        client->nextstate = STATE_START;
         break;
 
     case STATE_RESET:
         run_state_reset(client);
-        client->state = STATE_RESTART;
+        client->nextstate = STATE_RESTART;
         break;
 
     case STATE_STOP:
         tuya_mqtt_stop(&client->mqctx);
-        client->state = STATE_IDLE;
+        client->nextstate = STATE_IDLE;
         break;
 
     default:
