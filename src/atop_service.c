@@ -50,7 +50,7 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         TY_LOGE("post buffer malloc fail");
         return OPRT_MALLOC_FAILED;
     }
-
+    uint32_t timestamp = system_timestamp();
     /* activate JSON format */
     buffer_len = snprintf(buffer, ACTIVATE_POST_BUFFER_LEN, ATOP_ACTIVATE_POST_FMT, 
                             request->product_key,
@@ -58,7 +58,7 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
                             request->pv,
                             request->bv,
                             request->sw_ver,
-                            system_timestamp());
+                            timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -68,7 +68,7 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         .uuid = request->uuid,
         .key = request->authkey,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = ATOP_ACTIVATE_API,
         .version = ATOP_ACTIVATE_API_VERSION,
         .data = buffer,

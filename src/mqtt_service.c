@@ -404,6 +404,7 @@ int tuya_mqtt_stop(tuya_mqtt_context_t* context)
 	}
 	TY_LOGD("MQTT disconnect.");
 
+	context->network.disconnect(&context->network);
 	context->manual_disconnect = true;
 	context->state = MQTT_STATE_STOP;
 	return OPRT_OK;
@@ -540,7 +541,7 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 		case MQTT_STATE_TLS_CONNECTING:
 			rt = context->network.connect(&context->network, NULL);
 			if (OPRT_OK != rt) {
-				context->network.disconnect(&context->network);
+				context->state = MQTT_STATE_CONNECT_RESET;
 				break;
 			} 
 			TY_LOGD("TLS connected.");
@@ -599,6 +600,7 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 			break;
 
 		case MQTT_STATE_CONNECT_RESET:
+			system_sleep(1000);
 			context->network.disconnect(&context->network);
 			context->state = MQTT_STATE_TLS_CONNECTING;
 			break;
@@ -631,7 +633,7 @@ bool tuya_mqtt_connected(tuya_mqtt_context_t* context)
 	}
 }
 
-int tuya_mqtt_upgrade_progress_report_v41(tuya_mqtt_context_t* context, int percent, int type)
+int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel, int percent)
 {
     if(percent > 100) {
         TY_LOGE("input invalid:%d", percent);
@@ -644,7 +646,7 @@ int tuya_mqtt_upgrade_progress_report_v41(tuya_mqtt_context_t* context, int perc
     }
 
     INT_T offset = 0;
-    offset = sprintf((char*)data_buf,"{\"progress\":\"%d\",\"firmwareType\":%d}", percent, type);
+    offset = sprintf((char*)data_buf,"{\"progress\":\"%d\",\"firmwareType\":%d}", percent, channel);
 
     int ret = 0;
 	ret = tuya_mqtt_report_data(context, PRO_UPGE_PUSH, data_buf, offset);
