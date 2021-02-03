@@ -269,7 +269,7 @@ static int atop_response_result_parse_cjson(const uint8_t* input, size_t ilen,
     return rt;
 }
 
-static int32_t http_request_send( const TransportInterface_t * pTransportInterface,
+int32_t http_request_send( const TransportInterface_t * pTransportInterface,
                                   const HTTPRequestInfo_t * requestInfo,
                                   const uint8_t * pRequestBodyBuf,
                                   size_t reqBodyBufLen,
@@ -387,8 +387,10 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
         params[idx++].value = (char*)request->uuid;
     }
     
-    params[idx].key = "v";
-    params[idx++].value = (char*)request->version;
+    if(request->version){
+        params[idx].key = "v";
+        params[idx++].value = (char*)request->version;
+    }
 
     /* url param buffer make */
     char* path_buffer = system_malloc(MAX_URL_LENGTH);

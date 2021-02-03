@@ -160,7 +160,7 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 
 int tuya_mqtt_reconnect(tuya_mqtt_context_t* context);
 
-int tuya_mqtt_upgrade_progress_report_v41(tuya_mqtt_context_t* context, int percent, int type);
+int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel, int percent);
 
 #ifdef __cplusplus
 }

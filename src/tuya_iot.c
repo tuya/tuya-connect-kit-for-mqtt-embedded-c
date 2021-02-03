@@ -219,7 +219,7 @@ static void mqtt_service_dp_receive_on(tuya_mqtt_event_t* ev)
 
     /* Get dps string json */
     char* dps_string = cJSON_PrintUnformatted(cJSON_GetObjectItem(data, "dps"));
-	TY_LOGV("dps: \r\n%s", dps_string);
+    TY_LOGV("dps: \r\n%s", dps_string);
 
     /* Send DP string format event*/
     client->event.id = TUYA_EVENT_DP_RECEIVE;
@@ -368,13 +368,12 @@ static int run_state_reset(tuya_iot_client_t* client)
     TY_LOGW("CLIENT RESET...");
 
     /* Stop MQTT service */
-    tuya_mqtt_stop(&client->mqctx);
+    if (client->is_activated && tuya_mqtt_connected(&client->mqctx)) {
+        tuya_mqtt_stop(&client->mqctx);
+    }
 
     /* Clean client local data */
-    local_storage_del((const char*)(client->activate.schemaId));
-    local_storage_del((const char*)(client->config.uuid));
-
-    return OPRT_OK;
+    return tuya_iot_activated_data_remove(client);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -412,6 +411,12 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
         .free_fn = system_free
     };
     cJSON_InitHooks(&hooks);
+
+    /* Try to read the local activation data. 
+    * If the reading is successful, the device has been activated. */
+    if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
+        client->is_activated = true;
+    }
 
     client->state = STATE_IDLE;
     return ret;
@@ -477,7 +482,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     case STATE_DATA_LOAD:
         /* Try to read the local activation data. 
          * If the reading is successful, the device has been activated. */
-        if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
+        if (client->is_activated) {
             client->state = STATE_STARTUP_UPDATE;
             break;
         }
@@ -521,18 +526,26 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
     case STATE_ACTIVATING:
         ret = client_activate_process(client, client->binding->token);
-        if (OPRT_OK == ret) {
-            system_free(client->binding);
-            client->binding = NULL;
-
-            /* Retry to load activate */
-            client->state = STATE_DATA_LOAD;
-
-            /* DP event send */
-            client->event.id = TUYA_EVENT_ACTIVATE_SUCCESSED;
-            client->event.type = TUYA_DATE_TYPE_UNDEFINED;
-            iot_dispatch_event(client);
+        if (ret != OPRT_OK) {
+            system_sleep(1000);
+            break;
         }
+
+        system_free(client->binding);
+        client->binding = NULL;
+
+        /* Read and parse activate data */
+        if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
+            client->is_activated = true;
+        }
+
+        /* Retry to load activate */
+        client->state = STATE_DATA_LOAD;
+
+        /* DP event send */
+        client->event.id = TUYA_EVENT_ACTIVATE_SUCCESSED;
+        client->event.type = TUYA_DATE_TYPE_UNDEFINED;
+        iot_dispatch_event(client);
         break;
 
     case STATE_STARTUP_UPDATE:
@@ -598,22 +611,26 @@ bool tuya_iot_activated(tuya_iot_client_t* client)
         return false;
     }
 
-    if (client->state == STATE_MQTT_YIELD) {
-        return true;
-    }
-
-    if (strlen(client->activate.devid) > 0) {
-        return true;
-    }
-
-    if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
-        return true;
-    }
-
-    return false;
+    return client->is_activated;
 }
 
-int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps)
+int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
+{
+    TY_LOGW("Activated data remove...");
+
+    if (client->is_activated != true) {
+        return OPRT_COM_ERROR;
+    }
+
+    /* Clean client local data */
+    local_storage_del((const char*)(client->activate.schemaId));
+    local_storage_del((const char*)(client->config.uuid));
+    client->is_activated = false;
+    TY_LOGI("Activated data remove successed");
+    return OPRT_OK;
+}
+
+int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps, const char* time)
 {
     if (client == NULL || dps == NULL) {
         TY_LOGE("param error");
@@ -625,11 +642,13 @@ int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps)
     char* buffer = NULL;
 
     /* Package JSON format */
-    {
+    if (time) {
+        buffer = system_malloc(strlen(dps) + strlen(time) + 64);
+        TUYA_CHECK_NULL_RETURN(buffer, OPRT_MALLOC_FAILED);
+        printlen = sprintf(buffer, "{\"devId\":\"%s\",\"dps\":%s,\"t\":%s}", client->activate.devid, dps, time);
+    } else {
         buffer = system_malloc(strlen(dps) + 64);
-        if (NULL == buffer) {
-            return OPRT_MALLOC_FAILED;
-        }
+        TUYA_CHECK_NULL_RETURN(buffer, OPRT_MALLOC_FAILED);
         printlen = sprintf(buffer, "{\"devId\":\"%s\",\"dps\":%s}", client->activate.devid, dps);
     }
 
@@ -638,6 +657,11 @@ int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps)
     system_free(buffer);
 
     return rt;
+}
+
+int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps)
+{
+    return tuya_iot_dp_report_json_with_time(client,dps,NULL);
 }
 
 int tuya_iot_token_get_port_register(tuya_iot_client_t* client, tuya_activate_token_get_t token_get_func)

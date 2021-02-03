@@ -144,6 +144,7 @@ struct tuya_iot_client_handle {
     tuya_binding_info_t* binding;
     uint8_t retry_count;
     uint8_t state;
+    bool is_activated;
 };
 
 /**
@@ -205,6 +206,15 @@ int tuya_iot_yield(tuya_iot_client_t* client);
 int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps);
 
 /**
+ * @brief Report Tuya data point(DP) services to the cloud,with time.
+ * 
+ * @param client - The Tuya client context.
+ * @param dps - DP JSON format e.g: "{"101":true}"
+ * * @param time - time e.g: 
+ * @return int - OPRT_OK successful or error code. 
+ */
+int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps, const char* time);
+/**
  * @brief Is Tuya client has been activated?
  * 
  * @param client - The Tuya client context.
@@ -212,6 +222,14 @@ int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps);
  * @return false inactivated.
  */
 bool tuya_iot_activated(tuya_iot_client_t* client);
+
+/**
+ * @brief Remove Tuya client activated data
+ * 
+ * @param client - The Tuya client context.
+ * @return int - OPRT_OK successful or error code. 
+ */
+int tuya_iot_activated_data_remove(tuya_iot_client_t* client);
 
 /**
  * @brief Set up a customized get token interface.
