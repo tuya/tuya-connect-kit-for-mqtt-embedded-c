@@ -3,27 +3,26 @@
 
 - [Tuya IoT Link SDK for Embedded C](#tuya-iot-link-sdk-for-embedded-c)
   - [Table of Contents](#table-of-contents)
-  - [Introduction](#introduction)
-  - [Getting Started](#getting-started)
+  - [Overview](#overview)
+  - [Get started](#get-started)
     - [Prerequisites](#prerequisites)
     - [Clone the repository](#clone-the-repository)
-    - [Compiling](#compiling)
+    - [Compile the code](#compile-the-code)
     - [Run the demo](#run-the-demo)
   - [Usage example](#usage-example)
   - [License](#license)
 
 
-## Introduction
-Tuya IoTOS Link SDK
-provide core capabilities like device connection, uplink and downlink communication and OTA across platforms and operating systems.
-The SDK is implemented in C language and does not depend on the specific device platform and OS environment. It only needs to support the TCP/IP protocol stack and provide the necessary system-dependent interfaces of the SDK to complete the integration.
+## Overview
+Tuya IoTOS Link SDK provides core capabilities like device connection, uplink and downlink communication and OTA across platforms and operating systems.
+The SDK is implemented in C programming language and does not depend on the specific device platform and OS environment. It only needs to support the TCP/IP protocol stack and provide the necessary system-dependent interfaces of the SDK to complete the integration.
 
 
-## Getting Started
+## Get started
 
 ### Prerequisites
 
-Ubuntu & Debian
+Ubuntu and Debian
 ```sh
 sudo apt-get install make cmake libqrencode-dev
 ```
@@ -33,7 +32,7 @@ sudo apt-get install make cmake libqrencode-dev
 git clone https://github.com/tuya/tuya-iot-link-sdk-embedded-c.git --recurse-submodules
 ```
 
-### Compiling
+### Compile the code
 ```sh
 mkdir build && cd build
 cmake ..
@@ -47,12 +46,12 @@ make
 
 ## Usage example
 
-1. Initialize a client object tuya_iot_client_t client and initialize it, tuya_iot_config_t is to initialize PRODUCT ID, authorization information and other configuration parameters:
+1. Initialize a client object tuya_iot_client_t client. tuya_iot_config_t is used to initialize the product ID, authorization information, and other configuration parameters.
 ```c
-/* instantiate the client */
+/* Instantiate the client */
 tuya_iot_client_t client; 
 
-/* instantiate the config */
+/* Instantiate the config */
 tuya_iot_config_t config = {
     .software_ver = "1.0.0",
     .productkey = <Product ID>,
@@ -61,7 +60,7 @@ tuya_iot_config_t config = {
     .event_handler = user_event_handler_on
 };
 
-/* initialize the client */
+/* Initialize the client */
 tuya_iot_init(&client, &config);
 ```
 
@@ -88,12 +87,12 @@ void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* event)
 }
 ```
 
-3. Start the Tuya Link SDK service:
+3. Start the Tuya Link SDK service.
 ```c
 tuya_iot_start(&client);
 ```
 
-4. Loop called to yield the current thread to the underlying Tuya Link SDK client:
+4. A loop is called to yield the current thread to the underlying Tuya Link SDK client.
 ```c
 tuya_iot_yield(&client);
 ```
@@ -127,4 +126,4 @@ tuya_iot_dp_report_json(&client, multiple_value);
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. For more information, see `LICENSE`.
