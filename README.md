@@ -14,8 +14,8 @@
 
 
 ## Overview
-Tuya IoTOS Link SDK provides core capabilities like device connection, uplink and downlink communication and OTA across platforms and operating systems.
-The SDK is implemented in C programming language and does not depend on the specific device platform and OS environment. It only needs to support the TCP/IP protocol stack and provide the necessary system-dependent interfaces of the SDK to complete the integration.
+Tuya IoTOS Link SDK provides core capabilities, such as device connection, uplink and downlink communication, and OTA across platforms and operating systems.
+The SDK is implemented in the C programming language and does not depend on the specific device platform and OS environment. It only needs to support the TCP/IP protocol stack and provide the necessary system-dependent interfaces of the SDK to complete the integration.
 
 
 ## Get started
