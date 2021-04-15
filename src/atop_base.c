@@ -3,12 +3,9 @@
 #include <string.h>
 #include <assert.h>
 #include "tuya_log.h"
-#include "tuya_config_defaults.h"
 
 #include "system_interface.h"
-#include "network_interface.h"
-#include "transport_interface.h"
-#include "core_http_client.h"
+#include "http_client_interface.h"
 #include "core_json.h"
 #include "cJSON.h"
 #include "aes_inf.h"
@@ -19,11 +16,10 @@
 #define MD5SUM_LENGTH (16)
 #define POST_DATA_PREFIX (5) // 'data='
 #define MAX_URL_LENGTH (255)
-#define HEADER_BUFFER_LENGTH (512)
 #define DEFAULT_RESPONSE_BUFFER_LEN (1024)
 #define AES_BLOCK_SIZE (16)
 
-#define ATOP_COMMON_HEADER "application/x-www-form-urlencoded;charset=UTF-8"
+extern const char tuya_rootCA_pem[];
 
 typedef struct {
     char* key;
@@ -269,88 +265,6 @@ static int atop_response_result_parse_cjson(const uint8_t* input, size_t ilen,
     return rt;
 }
 
-int32_t http_request_send( const TransportInterface_t * pTransportInterface,
-                                  const HTTPRequestInfo_t * requestInfo,
-                                  const uint8_t * pRequestBodyBuf,
-                                  size_t reqBodyBufLen,
-                                  HTTPResponse_t * response)
-{
-    /* Represents header data that will be sent in an HTTP request. */
-    HTTPRequestHeaders_t requestHeaders;
-
-    /* Return value of all methods from the HTTP Client library API. */
-    HTTPStatus_t httpStatus = HTTPSuccess;
-
-    assert( requestInfo != NULL );
-    assert( response != NULL );
-
-    /* Initialize all HTTP Client library API structs to 0. */
-    ( void ) memset( &requestHeaders, 0, sizeof( requestHeaders ) );
-
-    /* Set the buffer used for storing request headers. */
-    requestHeaders.bufferLen = HEADER_BUFFER_LENGTH;
-    requestHeaders.pBuffer = system_malloc(requestHeaders.bufferLen);
-    if (requestHeaders.pBuffer == NULL) {
-        return OPRT_LINK_CORE_HTTP_RESPONSE_BUFFER_EMPTY;
-    }
-
-    httpStatus = HTTPClient_InitializeRequestHeaders( &requestHeaders,
-                                                      requestInfo );
-
-    httpStatus |= HTTPClient_AddHeader( &requestHeaders,
-                                        "Content-Type",
-                                        sizeof("Content-Type") - 1U,
-                                        ATOP_COMMON_HEADER,
-                                        sizeof(ATOP_COMMON_HEADER) - 1U);
-
-    if( httpStatus != HTTPSuccess ) {
-        TY_LOGE("HTTP header error:%d", httpStatus);
-        system_free(requestHeaders.pBuffer);
-        return OPRT_LINK_CORE_HTTP_CLIENT_HEADER_ERROR;
-    }
-
-    /* Initialize the response object. The same buffer used for storing
-        * request headers is reused here. */
-    if (NULL == response->pBuffer || response->bufferLen <= 0) {
-        system_free(requestHeaders.pBuffer);
-        return OPRT_MALLOC_FAILED;
-    }
-
-    TY_LOGI( "Sending HTTP %.*s request to %.*s%.*s",
-                ( int32_t ) requestInfo->methodLen, requestInfo->pMethod,
-                ( int32_t ) requestInfo->hostLen, requestInfo->pHost,
-                ( int32_t ) requestInfo->pathLen, requestInfo->pPath ) ;
-
-    /* Send the request and receive the response. */
-    httpStatus = HTTPClient_Send( pTransportInterface,
-                                    &requestHeaders,
-                                    ( uint8_t * ) pRequestBodyBuf,
-                                    reqBodyBufLen,
-                                    response,
-                                    0 );
-
-    /* Release headers buffer */
-    system_free(requestHeaders.pBuffer);
-
-    if( httpStatus != HTTPSuccess ) {
-        TY_LOGE( "Failed to send HTTP %.*s request to %.*s%.*s: Error=%s.",
-                    ( int32_t ) requestInfo->methodLen, requestInfo->pMethod,
-                    ( int32_t ) requestInfo->hostLen, requestInfo->pHost,
-                    ( int32_t ) requestInfo->pathLen, requestInfo->pPath,
-                    HTTPClient_strerror( httpStatus ));
-        return OPRT_LINK_CORE_HTTP_CLIENT_SEND_ERROR;
-    }
-
-    TY_LOGV("Response Headers:\n%.*s\n"
-            "Response Status:\n%u\n"
-            "Response Body:\n%.*s\n",
-            ( int32_t ) response->headersLen, response->pHeaders,
-            response->statusCode,
-            ( int32_t ) response->bodyLen, response->pBody );
-
-    return OPRT_OK;
-}
-
 int atop_base_request(const atop_base_request_t* request, atop_base_response_t* response)
 {
     // TODO 参数校验
@@ -359,6 +273,8 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     }
 
     int rt = OPRT_OK;
+    int i;
+    http_client_status_t http_status;
 
     /* user data */
     response->user_data = (void*)request->user_data;
@@ -434,55 +350,14 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     }
     TY_LOGV("out post data len:%d, data:%s", body_length, body_buffer);
 
-    /* TLS pre init */
-    NetworkContext_t network;
-    extern const char tuya_rootCA_pem[];
-    
-    rt = network_tls_init(&network, &(const TLSConnectParams){
-            .pRootCALocation = tuya_rootCA_pem,
-            .pDestinationURL = request->host,
-            .DestinationPort = request->port,
-            .TimeoutMs = DEFAULT_HTTP_TIMEOUT,
-            .ServerVerificationFlag = true
-    });
-
-    if (OPRT_OK != rt) {
-        TY_LOGE("network_tls_init fail:%d", rt);
-        system_free(path_buffer);
-        system_free(body_buffer);
-        return rt;
-    }
-
-    /* Start TLS connect */
-    rt = network_tls_connect(&network, NULL);
-    if (OPRT_OK != rt) {
-        TY_LOGE("network_tls_connect fail:%d", rt);
-        network_tls_disconnect(&network);
-        network_tls_destroy(&network);
-        system_free(path_buffer);
-        system_free(body_buffer);
-        return rt;
-    }
-    TY_LOGD("tls connencted!");
-
-    /* http client TransportInterface */
-    TransportInterface_t pTransportInterface = {
-        .pNetworkContext = (NetworkContext_t*)&network,
-        .recv = (TransportRecv_t)network_tls_read,
-        .send = (TransportSend_t)network_tls_write
+    /* HTTP headers */
+    http_client_header_t headers[] = {
+        {.key = "User-Agent", .value = "TUYA_IOT_SDK"},
+        {.key = "Content-Type", .value = "application/x-www-form-urlencoded;charset=UTF-8"},
     };
+    uint8_t headers_count = sizeof(headers)/sizeof(http_client_header_t);
 
-    /* http client request object make */
-    HTTPRequestInfo_t requestInfo = {
-        .pMethod = HTTP_METHOD_POST,
-        .methodLen = sizeof(HTTP_METHOD_POST) - 1,
-        .pHost = request->host,
-        .hostLen = strlen(request->host),
-        .pPath = path_buffer,
-        .pathLen = path_buffer_len,
-        .reqFlags = HTTP_REQUEST_KEEP_ALIVE_FLAG
-    };
-
+    /* Response buffer length preview */
     uint8_t* response_buffer = NULL;
     size_t response_buffer_length = DEFAULT_RESPONSE_BUFFER_LEN;
 
@@ -499,57 +374,62 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
         system_free(body_buffer);
         return OPRT_MALLOC_FAILED;
     }
-    HTTPResponse_t http_response = {
-        .pBuffer = response_buffer,
-        .bufferLen = response_buffer_length
+    http_client_response_t http_response = {
+        .buffer = response_buffer,
+        .buffer_length = response_buffer_length
     };
 
-    /* HTTP request send */
+    /* HTTP Request send */
     TY_LOGD("http request send!");
-    rt = http_request_send( (const TransportInterface_t*)&pTransportInterface,
-                            (const HTTPRequestInfo_t*)&requestInfo,
-                            (const uint8_t*)body_buffer,
-                            body_length,
-                            &http_response);
-
-    if (OPRT_OK != network_tls_disconnect(&network)) {
-        TY_LOGW("network_tls_disconnect fail:%d", rt);
-    }
-
-    if (OPRT_OK != network_tls_destroy(&network)) {
-        TY_LOGW("network_tls_destroy fail:%d", rt);
-    }
+    http_status = http_client_request(
+        &(const http_client_request_t){
+            .cert_pem = tuya_rootCA_pem,
+            .cert_len = strlen(tuya_rootCA_pem),
+            .host = request->host,
+            .port = request->port,
+            .method = "POST",
+            .path = path_buffer,
+            .headers = headers,
+            .headers_count = headers_count,
+            .body = body_buffer,
+            .body_length = body_length,
+        }, 
+        &http_response);
 
     /* Release http buffer */
     system_free(path_buffer);
     system_free(body_buffer);
-    system_free(response_buffer);
 
-    if (OPRT_OK != rt) {
+    if (HTTP_CLIENT_SUCCESS != http_status) {
         TY_LOGE("http_request_send error:%d", rt);
+		system_free(response_buffer);
         return rt;
     }
 
     size_t result_buffer_length = 0;
-    uint8_t* result_buffer = system_calloc(1, http_response.bodyLen);
+    uint8_t* result_buffer = system_calloc(1, http_response.body_length);
     if (NULL == result_buffer) {
         TY_LOGE("result_buffer malloc fail");
+        system_free(response_buffer);
         return OPRT_MALLOC_FAILED;
     }
 
     /* Decoded response data */
     rt = atop_response_data_decode( request->key, 
-                                    http_response.pBody, http_response.bodyLen,
+                                    http_response.body, http_response.body_length,
                                     result_buffer, &result_buffer_length);
 
     if (OPRT_OK == rt) {
         rt = atop_response_result_parse_cjson(result_buffer, result_buffer_length, response);
+        system_free(response_buffer);
         system_free(result_buffer);
         return rt;
     }
 
     TY_LOGW("atop_response_decode error:%d, try parse the plaintext data.", rt);
-    return atop_response_result_parse_cjson(http_response.pBody, http_response.bodyLen, response);
+    rt = atop_response_result_parse_cjson(http_response.body, http_response.body_length, response);
+    system_free(response_buffer);
+    return rt;
 }
 
 void atop_base_response_free(atop_base_response_t* response)

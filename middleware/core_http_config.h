@@ -13,8 +13,6 @@
 #ifndef _CORE_HTTP_CONFIG_
 #define _CORE_HTTP_CONFIG_
 
-#include "log.h"
-
 /**
  * @brief Maximum size, in bytes, of headers allowed from the server.
  *

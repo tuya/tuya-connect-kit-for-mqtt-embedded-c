@@ -17,6 +17,7 @@ typedef struct {
     const char* sw_ver;
     const char* pv;
     const char* bv;
+    const char* skill_param;
     size_t buflen_custom;
     const void* user_data;
 } tuya_activite_request_t;
