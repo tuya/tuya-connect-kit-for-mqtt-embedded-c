@@ -16,7 +16,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "tuya_error_code.h"
 
 /**
  * @brief NetworkContext_t Type

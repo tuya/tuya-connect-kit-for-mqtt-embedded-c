@@ -14,9 +14,9 @@
 #include <assert.h>
 #include "tuya_url.h"
 #include "tuya_log.h"
+#include "tuya_error_code.h"
 
 #include "system_interface.h"
-#include "network_interface.h"
 #include "atop_base.h"
 #include "atop_service.h"
 #include "cJSON.h"
@@ -26,6 +26,8 @@
 #define ATOP_ACTIVATE_POST_FMT "{\"productKey\":\"%s\",\"token\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\",\"cadVer\":\"1.0.3\",\"softVer\":\"%s\",\"t\":%d}"
 #define ATOP_ACTIVATE_API "tuya.device.active"
 #define ATOP_ACTIVATE_API_VERSION "4.3"
+#define CAD_VER "1.0.3" 
+#define CD_VER "1.0.0"
 
 #define ATOP_RESET_API "tuya.device.reset"
 #define ATOP_RESET_API_VERSION "4.0"
@@ -44,21 +46,32 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
 
     /* post data */
     #define ACTIVATE_POST_BUFFER_LEN (255)
-    size_t buffer_len = 0;
-    char* buffer = system_malloc(ACTIVATE_POST_BUFFER_LEN);
+    size_t prealloc_size = ACTIVATE_POST_BUFFER_LEN;
+
+    if(request->skill_param) {
+        prealloc_size += strlen(request->skill_param) + 10;
+    }
+
+    char* buffer = system_malloc(prealloc_size);
     if (NULL == buffer) {
         TY_LOGE("post buffer malloc fail");
         return OPRT_MALLOC_FAILED;
     }
     uint32_t timestamp = system_timestamp();
+
     /* activate JSON format */
-    buffer_len = snprintf(buffer, ACTIVATE_POST_BUFFER_LEN, ATOP_ACTIVATE_POST_FMT, 
-                            request->product_key,
-                            request->token,
-                            request->pv,
-                            request->bv,
-                            request->sw_ver,
-                            timestamp);
+    size_t offset = 0;
+
+    offset = sprintf(buffer, "{\"token\":\"%s\",\"softVer\":\"%s\",\"productKey\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\",\"options\": \"%s\"",
+                        request->token, request->sw_ver, request->product_key, request->pv, request->bv, "{\\\"isFK\\\":false}");
+    
+    if(request->skill_param && strlen(request->skill_param) > 0) {
+        offset += sprintf(buffer + offset,",\"skillParam\":\"%s\"", request->skill_param);
+    }
+
+    offset += sprintf(buffer + offset,",\"cadVer\":\"%s\",\"cdVer\":\"%s\",\"t\":%d}",
+                        CAD_VER, CD_VER, timestamp);
+
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -72,7 +85,7 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         .api = ATOP_ACTIVATE_API,
         .version = ATOP_ACTIVATE_API_VERSION,
         .data = buffer,
-        .datalen = buffer_len,
+        .datalen = offset,
         .buflen_custom = request->buflen_custom,
         .user_data = request->user_data
     };

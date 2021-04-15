@@ -1,7 +1,7 @@
 # Project information.
 cmake_minimum_required( VERSION 3.2.0 )
 project( TuyaIoTLinkSdkEmbeddedC
-         VERSION 202011.11
+         VERSION 202104.15
          LANGUAGES C )
 
 # Allow the project to be organized into folders.
@@ -64,6 +64,9 @@ add_subdirectory( libraries )
 
 # Add platform.
 add_subdirectory( platform )
+
+# Add middleware.
+add_subdirectory( middleware )
 
 # Add utils.
 add_subdirectory( utils )

@@ -8,11 +8,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "network_interface.h"
-#include "core_mqtt.h"
-
-typedef struct mqtt_client mqtt_client_t;
-
 /**
  * @brief The network buffer must remain valid for the lifetime of the MQTT context.
  */
@@ -128,17 +123,16 @@ typedef struct {
 } mqtt_protocol_handle_t;
 
 typedef struct {
-    NetworkContext_t network;
-    MQTTContext_t mqclient;
+    void* mqttctx;
     tuya_mqtt_access_t signature;
     mqtt_protocol_handle_t protocol_handle[MQTT_EVENT_ID_MAX];
     uint32_t sequence_in;
     uint32_t sequence_out;
     uint8_t handle_num;
-    uint8_t state;
-    uint8_t mqttbuffer[TUYA_MQTT_BUFFER_SIZE];
-    bool manual_disconnect;
     void* user_data;
+    bool manual_disconnect;
+    bool is_inited;
+    bool is_connected;
 } tuya_mqtt_context_t;
 
 
@@ -154,11 +148,9 @@ int tuya_mqtt_destory(tuya_mqtt_context_t* context);
 
 bool tuya_mqtt_connected(tuya_mqtt_context_t* context);
 
-void tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb, void* user_data);
+int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb, void* user_data);
 
 int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length);
-
-int tuya_mqtt_reconnect(tuya_mqtt_context_t* context);
 
 int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel, int percent);
 

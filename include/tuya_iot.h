@@ -115,6 +115,7 @@ typedef struct {
     const char* uuid;
     const char* authkey;
     const char* software_ver;
+    const char* skill_param;
     event_handle_cb_t event_handler;
 } tuya_iot_config_t;
 

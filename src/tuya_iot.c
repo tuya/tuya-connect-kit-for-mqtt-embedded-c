@@ -173,6 +173,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
         .uuid = client->config.uuid,
         .authkey = client->config.authkey,
         .sw_ver = client->config.software_ver,
+        .skill_param = client->config.skill_param,
         .bv = BS_VERSION,
         .pv = PV_VERSION,
         .buflen_custom = ACTIVATE_BUFFER_LENGTH,
@@ -656,10 +657,14 @@ int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps
     }
 
     /* Report buffer */
-    rt = tuya_mqtt_report_data(&client->mqctx, PRO_DATA_PUSH, (uint8_t*)buffer, printlen);
+    uint16_t mgsid = tuya_mqtt_report_data(&client->mqctx, PRO_DATA_PUSH, (uint8_t*)buffer, printlen);
     system_free(buffer);
 
-    return rt;
+    if (mgsid <= 0) {
+        return OPRT_SEND_ERR;
+    }
+
+    return OPRT_OK;
 }
 
 int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps)
@@ -698,6 +703,6 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
     /* Post version info to ATOP service */
     rt = atop_service_version_update_v41(client->activate.devid, client->activate.seckey, 
                                         (const char*)version_buffer);
-    
+    system_free(version_buffer);
     return rt;
 }

@@ -5,6 +5,7 @@ extern "C" {
 #include <stdbool.h>
 #include <string.h>
 #include "log.h"
+#include "tuya_error_code.h"
 #include "network_interface.h"
 
 #include "mbedtls/platform.h"
