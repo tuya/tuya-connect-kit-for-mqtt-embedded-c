@@ -4,9 +4,8 @@
 #include "mqtt_client_interface.h"
 #include "transport_interface.h"
 #include "system_interface.h"
+#include "core_mqtt_config.h"
 #include "core_mqtt.h"
-
-#define CORE_MQTT_BUFFER_SIZE (1024*4)
 
 typedef struct {
     mqtt_client_config_t config;

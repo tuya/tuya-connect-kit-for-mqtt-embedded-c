@@ -35,5 +35,9 @@
  */
 #define MQTT_PINGRESP_TIMEOUT_MS      ( 500U )
 
+/**
+ * @brief CORE_MQTT_BUFFER_SIZE
+ */
+#define CORE_MQTT_BUFFER_SIZE         ( 2048U )
 
 #endif /* ifndef CORE_MQTT_CONFIG_H_ */
