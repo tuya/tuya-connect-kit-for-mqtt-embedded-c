@@ -159,7 +159,9 @@ http_client_status_t http_client_request( const http_client_request_t* request,
                                  (const uint8_t*)request->body,
                                  request->body_length,
                                  &http_response );
-
+    /* tls disconnect */
+    network_tls_disconnect(&network);
+    network_tls_destroy(&network);
 
     if (OPRT_OK != rt) {
         log_error("http_request_send error:%d", rt);
