@@ -1,7 +1,7 @@
-# Tuya IoT Link SDK for Embedded C
+# Tuya IoT Link SDK for Embedded C(beta)
 ## Table of Contents
 
-- [Tuya IoT Link SDK for Embedded C](#tuya-iot-link-sdk-for-embedded-c)
+- [Tuya IoT Link SDK for Embedded C(beta)](#tuya-iot-link-sdk-for-embedded-cbeta)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Getting Started](#getting-started)
