@@ -184,9 +184,6 @@ mqtt_client_status_t mqtt_client_connect(void* client)
         &pSessionPresent );
     if (MQTTSuccess != mqtt_status) {
         log_error("mqtt connect err: %s(%d)", MQTT_Status_strerror(mqtt_status), mqtt_status);
-        if (MQTT_STATUS_NOT_AUTHORIZED != mqtt_status) {
-            return MQTT_STATUS_NOT_AUTHORIZED;
-        }
         return MQTT_STATUS_CONNECT_FAILED;
     }
 
@@ -295,9 +292,7 @@ mqtt_client_status_t mqtt_client_yield(void* client)
     mqtt_status = MQTT_ProcessLoop( &context->mqclient, context->config.timeout_ms);
     if( mqtt_status != MQTTSuccess ) {
         log_error("MQTT_ProcessLoop returned with status = %s.", MQTT_Status_strerror( mqtt_status ));
-        if(context->config.on_disconnected) {
-            context->config.on_disconnected(context, context->config.userdata);
-        }
+        mqtt_client_disconnect(context);
         system_sleep(context->config.timeout_ms);
         return MQTT_STATUS_NETWORK_TIMEOUT;
     }

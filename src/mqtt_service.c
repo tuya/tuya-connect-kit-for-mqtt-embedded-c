@@ -265,6 +265,7 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 
 	/* Wait start task */
 	context->is_inited = true;
+	context->manual_disconnect = true;
 	return OPRT_OK;
 }
 
@@ -443,6 +444,7 @@ int tuya_mqtt_destory(tuya_mqtt_context_t* context)
 	}
 
 	mqtt_client_status_t mqtt_status = mqtt_client_deinit(context->mqttctx);
+	mqtt_client_free(context->mqttctx);
 	if (mqtt_status != MQTT_STATUS_SUCCESS) {
 		return OPRT_COM_ERROR;
 	}
