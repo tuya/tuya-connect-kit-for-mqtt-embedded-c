@@ -94,7 +94,7 @@ mqtt_client_status_t mqtt_client_init(void* client, const mqtt_client_config_t* 
     MQTTStatus_t mqtt_status;
 
     /* Clean memory */
-    memset(context, 0, sizeof(context));
+    memset(context, 0, sizeof(mqtt_client_context_t));
 
     /* Setting data */
     context->config = *config;
