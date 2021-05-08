@@ -136,6 +136,7 @@ mqtt_client_status_t mqtt_client_init(void* client, const mqtt_client_config_t* 
 
     if( mqtt_status != MQTTSuccess ) {
         log_error( "MQTT init failed: Status = %s.", MQTT_Status_strerror( mqtt_status ) );
+        context->network.destroy(&context->network);
 		return OPRT_COM_ERROR;
     }
     
@@ -184,6 +185,7 @@ mqtt_client_status_t mqtt_client_connect(void* client)
         &pSessionPresent );
     if (MQTTSuccess != mqtt_status) {
         log_error("mqtt connect err: %s(%d)", MQTT_Status_strerror(mqtt_status), mqtt_status);
+        context->network.disconnect(&context->network);
         return MQTT_STATUS_CONNECT_FAILED;
     }
 
