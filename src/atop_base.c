@@ -401,9 +401,9 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     system_free(body_buffer);
 
     if (HTTP_CLIENT_SUCCESS != http_status) {
-        TY_LOGE("http_request_send error:%d", rt);
+        TY_LOGE("http_request_send error:%d", http_status);
 		system_free(response_buffer);
-        return rt;
+        return OPRT_LINK_CORE_HTTP_CLIENT_SEND_ERROR;
     }
 
     size_t result_buffer_length = 0;
