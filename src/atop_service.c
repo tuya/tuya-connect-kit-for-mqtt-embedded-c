@@ -418,3 +418,122 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
 
     return rt;
 }
+
+int atop_service_outdoors_property_upload(const char* id, const char* key, const char *countryCode, const char *phone)
+{
+    if (NULL == id || NULL == key || NULL == countryCode || NULL == phone) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+    uint32_t timestamp = system_timestamp();
+
+    /* post data */
+    #define UPDATE_PROPERTY_BUFFER_LEN 255
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(UPDATE_PROPERTY_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+
+    // {"countryCode":"86","phone":"15656065877"}
+    buffer_len = snprintf(buffer, UPDATE_PROPERTY_BUFFER_LEN, 
+        "{\"property\":{\"countryCode\":\"%s\",\"phone\":\"%s\"},\"t\":%d}", 
+        countryCode, phone, timestamp);
+    TY_LOGV("POST JSON:%s", buffer);
+
+    /* atop_base_request object construct */
+    atop_base_request_t atop_request = {
+        .host = tuya_atop_server_host_get(),
+        .port = tuya_atop_server_port_get(),
+        .devid = id,
+        .key = key,
+        .path = "/d.json",
+        .timestamp = timestamp,
+        .api = "tuya.device.trip.outdoors.device.property",
+        .version = "1.0",
+        .data = buffer,
+        .datalen = buffer_len,
+        .user_data = NULL,
+    };
+
+    atop_base_response_t response = {0};
+
+    /* ATOP service request send */
+    rt = atop_base_request(&atop_request, &response);
+    system_free(buffer);
+    
+    bool success = response.success;
+    atop_base_response_free(&response);
+    
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_base_request error:%d", rt);
+        return rt;
+    }
+
+    if (success == false) {
+        return OPRT_COM_ERROR;
+    }
+
+    return rt;
+}
+
+int atop_service_iccid_upload(const char* id, const char* key, const char *iccid)
+{
+    if (NULL == id || NULL == key || NULL == iccid) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+    uint32_t timestamp = system_timestamp();
+
+    /* post data */
+    #define UPDATE_PROPERTY_BUFFER_LEN 255
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(UPDATE_PROPERTY_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+
+    // {"countryCode":"86","phone":"15656065877"}
+    buffer_len = snprintf(buffer, UPDATE_PROPERTY_BUFFER_LEN, 
+        "{\"metas\":{\"catIccId\":\"%s\"},\"t\":%d}", iccid, timestamp);
+    TY_LOGV("POST JSON:%s", buffer);
+
+    /* atop_base_request object construct */
+    atop_base_request_t atop_request = {
+        .host = tuya_atop_server_host_get(),
+        .port = tuya_atop_server_port_get(),
+        .devid = id,
+        .key = key,
+        .path = "/d.json",
+        .timestamp = timestamp,
+        .api = "tuya.device.meta.save",
+        .version = "1.0",
+        .data = buffer,
+        .datalen = buffer_len,
+        .user_data = NULL,
+    };
+
+    atop_base_response_t response = {0};
+
+    /* ATOP service request send */
+    rt = atop_base_request(&atop_request, &response);
+    system_free(buffer);
+    
+    bool success = response.success;
+    atop_base_response_free(&response);
+    
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_base_request error:%d", rt);
+        return rt;
+    }
+
+    if (success == false) {
+        return OPRT_COM_ERROR;
+    }
+
+    return rt;
+}
