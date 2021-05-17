@@ -28,24 +28,23 @@ typedef enum {
     HTTP_DYNAMIC_CFG_RATERULE,//rate rule for dp
 } HTTP_DYNAMIC_CFG_TYPE;
 
-int atop_service_activate_request(const tuya_activite_request_t* request, 
-                                        atop_base_response_t* response);
+int atop_service_activate_request(const tuya_activite_request_t* request, atop_base_response_t* response);
 
 int atop_service_client_reset(const char* id, const char* key);
 
-int atop_service_dynamic_cfg_get_v20(const char* id, const char* key, 
-                    HTTP_DYNAMIC_CFG_TYPE type, atop_base_response_t* response);
+int atop_service_dynamic_cfg_get_v20(const char* id, const char* key, HTTP_DYNAMIC_CFG_TYPE type, atop_base_response_t* response);
 
-int atop_service_upgrade_info_get_v44(const char* id, const char* key, 
-                                int channel, atop_base_response_t* response);
+int atop_service_upgrade_info_get_v44(const char* id, const char* key, int channel, atop_base_response_t* response);
 
-int atop_service_upgrade_status_update_v41(const char* id, const char* key, 
-                                int channel, int status);
+int atop_service_upgrade_status_update_v41(const char* id, const char* key, int channel, int status);
 
 int atop_service_version_update_v41(const char* id, const char* key, const char *versions);
 
-int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, 
-                                            atop_base_response_t* response);
+int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop_base_response_t* response);
+
+int atop_service_outdoors_property_upload(const char* id, const char* key, const char *countryCode, const char *phone);
+
+int atop_service_iccid_upload(const char* id, const char* key, const char *iccid);
 
 #ifdef __cplusplus
 }
