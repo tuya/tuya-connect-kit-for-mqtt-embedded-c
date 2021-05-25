@@ -1,5 +1,5 @@
-#ifndef __TUYA_MQTT_API_H_
-#define __TUYA_MQTT_API_H_
+#ifndef _TUYA_IOT_H_
+#define _TUYA_IOT_H_
 
 #ifdef __cplusplus
 extern "C" {

@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+int tuya_region_regist_key_set( const char* region, const char* regist_key );
+
+int tuya_region_regist_key_remove();
+
+int tuya_region_regist_key_load();
+
 const char* tuya_atop_server_host_get();
 
 uint16_t tuya_atop_server_port_get();
