@@ -413,6 +413,9 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
     };
     cJSON_InitHooks(&hooks);
 
+    /* Load Tuya cloud endpoint config */
+    tuya_region_regist_key_load();
+
     /* Try to read the local activation data. 
     * If the reading is successful, the device has been activated. */
     if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
@@ -526,6 +529,9 @@ int tuya_iot_yield(tuya_iot_client_t* client)
             /* Take token go to activate */
             client->nextstate = STATE_ACTIVATING;
         }
+
+        /* set binding.region, binding.regist_key to tuya dns server */
+        tuya_region_regist_key_set(client->binding->region, client->binding->regist_key);
         break;
 
     case STATE_ACTIVATING:
@@ -629,6 +635,7 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
     /* Clean client local data */
     local_storage_del((const char*)(client->activate.schemaId));
     local_storage_del((const char*)(client->config.uuid));
+    tuya_region_regist_key_remove();
     client->is_activated = false;
     TY_LOGI("Activated data remove successed");
     return OPRT_OK;
