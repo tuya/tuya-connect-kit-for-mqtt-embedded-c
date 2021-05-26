@@ -39,12 +39,16 @@ const tuya_endpoint_t default_endpint_pro[] = {
     {.region = "AY", .atop = {"a2.tuyacn.com", 443}, .mqtt = {"m2.tuyacn.com", 8883}},
     {.region = "AZ", .atop = {"a2.tuyaus.com", 443}, .mqtt = {"m2.tuyaus.com", 8883}},
     {.region = "EU", .atop = {"a2.tuyaeu.com", 443}, .mqtt = {"m2.tuyaeu.com", 8883}},
+    {.region = "IN", .atop = {"a2.tuyain.com", 443}, .mqtt = {"m2.tuyain.com", 8883}},
+    {.region = "UE", .atop = {"a2-ueaz.tuyaus.com", 443}, .mqtt = {"m2-ueaz.tuyaus.com", 8883}},
 };
 
 const tuya_endpoint_t default_endpint_pr_0[] = {
     {.region = "AY", .atop = {"a2-cn.wgine.com", 443}, .mqtt = {"m2-cn.wgine.com", 8883}},
     {.region = "AZ", .atop = {"a2-us.wgine.com", 443}, .mqtt = {"m2-us.wgine.com", 8883}},
     {.region = "EU", .atop = {"a2-eu.wgine.com", 443}, .mqtt = {"m2-eu.wgine.com", 8883}},
+    {.region = "IN", .atop = {"a2-ind.wgine.com", 443}, .mqtt = {"m2-ind.wgine.com", 8883}},
+    {.region = "UE", .atop = {"a2-ueaz.wgine.com", 443}, .mqtt = {"m2-ueaz.wgine.com", 8883}},
 };
 
 const tuya_cloud_environment_t default_env_list[] = {
