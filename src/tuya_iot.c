@@ -18,8 +18,6 @@
 
 #define ACTIVATE_KV_BUFFER         (255)
 
-extern const char tuya_rootCA_pem[];
-
 typedef enum {
     STATE_IDLE,
     STATE_START,
@@ -329,7 +327,8 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
 
     /* mqtt init */
     rt = tuya_mqtt_init(&client->mqctx, &(const tuya_mqtt_config_t){
-        .rootCA = tuya_rootCA_pem,
+        .cacert = tuya_mqtt_server_cacert_get(),
+        .cacert_len = tuya_mqtt_server_cacert_length_get(),
         .host = tuya_mqtt_server_host_get(),
         .port = tuya_mqtt_server_port_get(),
         .devid = client->activate.devid,

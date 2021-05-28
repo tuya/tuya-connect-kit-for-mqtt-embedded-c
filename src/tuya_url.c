@@ -4,23 +4,7 @@
 #include "tuya_error_code.h"
 #include "storage_interface.h"
 
-#define MAX_LENGTH_REGION         (2)    // max string length of REGIN IN TOKEN
-#define MAX_LENGTH_REGIST         (4)    // max string length of REGIST_KEY IN TOKEN
-#define MAX_LENGTH_TUYA_HOST      (64)
-
-typedef struct {
-    char region[MAX_LENGTH_REGION + 1]; // get from token
-    struct {
-        char host[MAX_LENGTH_TUYA_HOST + 1];
-        uint16_t port;
-        char* cert;
-    } atop;
-    struct {
-        char host[MAX_LENGTH_TUYA_HOST + 1];
-        uint16_t port;
-        char* cert;
-    } mqtt;
-} tuya_endpoint_t;
+extern int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint_t* endport);
 
 typedef struct {
     char regist[MAX_LENGTH_REGIST + 1];
@@ -110,36 +94,47 @@ int tuya_region_regist_key_set( const char* region, const char* regist_key )
     return tuya_region_regist_key_load();
 }
 
-int tuya_region_regist_key_load()
+static int default_endpoint_get( const char* region, const char* regist_key, tuya_endpoint_t* endpoint )
 {
-    int ret;
-    ret = tuya_region_regist_key_read(endpoint_mgr.region, endpoint_mgr.regist_key);
-
-    /* Load default domain */
     int i;
 
     /* find the defalut regist key */
     tuya_cloud_environment_t* env = (tuya_cloud_environment_t*)&default_env_list[0]; // defalut
     for (i = 0; i < sizeof(default_env_list)/sizeof(tuya_cloud_environment_t); i++) {
-        if (memcmp(endpoint_mgr.regist_key, default_env_list[i].regist, sizeof(endpoint_mgr.regist_key)) == 0) {
+        if (memcmp(regist_key, default_env_list[i].regist, strlen(regist_key)) == 0) {
             env = (tuya_cloud_environment_t*)&default_env_list[i];
             TY_LOGI("Environment:%s", default_env_list[i].regist);
             break;
         }
     }
-
+    
     /* find the default region */
-    tuya_endpoint_t* endpoint = (tuya_endpoint_t*)&env->endpoint[0]; // defalut
+    endpoint = (tuya_endpoint_t*)&env->endpoint[0]; // defalut
     for (i = 0; i < env->endpoint_num; i++) {
-        if (memcmp(endpoint_mgr.region, env->endpoint[i].region, sizeof(endpoint_mgr.region)) == 0) {
+        if (memcmp(region, env->endpoint[i].region, strlen(region)) == 0) {
             endpoint = (tuya_endpoint_t*)&env->endpoint[i];
             TY_LOGI("Host region:%s", env->endpoint[i].region);
             break;
         }
     }
-
-    endpoint_mgr.endpoint = *endpoint;
     return OPRT_OK;
+}
+
+int tuya_region_regist_key_load()
+{
+    int ret = tuya_region_regist_key_read(endpoint_mgr.region, endpoint_mgr.regist_key);
+    
+    ret = iotdns_cloud_endpoint_get(endpoint_mgr.region, 
+                                    endpoint_mgr.regist_key, 
+                                    &endpoint_mgr.endpoint);
+    if (ret == OPRT_OK) {
+        return OPRT_OK;
+    }
+
+    /* Load default domain */
+    return default_endpoint_get((const char*)endpoint_mgr.region, 
+                                (const char*)endpoint_mgr.regist_key, 
+                                &endpoint_mgr.endpoint);
 }
 
 const char* tuya_atop_server_host_get()
@@ -152,6 +147,16 @@ uint16_t tuya_atop_server_port_get()
     return endpoint_mgr.endpoint.atop.port;
 }
 
+const uint8_t* tuya_atop_server_cacert_get()
+{
+    return (const uint8_t*)endpoint_mgr.endpoint.atop.cert;
+}
+
+size_t tuya_atop_server_cacert_length_get()
+{
+    return endpoint_mgr.endpoint.atop.cert_len;
+}
+
 const char* tuya_mqtt_server_host_get()
 {
     return endpoint_mgr.endpoint.mqtt.host;
@@ -160,4 +165,14 @@ const char* tuya_mqtt_server_host_get()
 uint16_t tuya_mqtt_server_port_get()
 {
     return endpoint_mgr.endpoint.mqtt.port;
+}
+
+const uint8_t* tuya_mqtt_server_cacert_get()
+{
+    return (const uint8_t*)endpoint_mgr.endpoint.mqtt.cert;
+}
+
+size_t tuya_mqtt_server_cacert_length_get()
+{
+    return endpoint_mgr.endpoint.mqtt.cert_len;
 }

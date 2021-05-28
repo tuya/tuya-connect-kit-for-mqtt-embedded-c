@@ -76,8 +76,6 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .uuid = request->uuid,
         .key = request->authkey,
         .path = "/d.json",
@@ -122,8 +120,6 @@ int atop_service_client_reset(const char* id, const char* key)
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .devid = id,
         .key = key,
         .path = "/d.json",
@@ -194,8 +190,6 @@ int atop_service_dynamic_cfg_get_v20(const char* id, const char* key, HTTP_DYNAM
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .devid = id,
         .key = key,
         .path = "/d.json",
@@ -238,8 +232,6 @@ int atop_service_upgrade_info_get_v44(const char* id, const char* key, int chann
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .devid = id,
         .key = key,
         .path = "/d.json",
@@ -283,8 +275,6 @@ int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .devid = id,
         .key = key,
         .path = "/d.json",
@@ -329,8 +319,6 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .devid = id,
         .key = key,
         .path = "/d.json",
@@ -385,8 +373,6 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .devid = id,
         .key = key,
         .path = "/d.json",
@@ -445,8 +431,6 @@ int atop_service_outdoors_property_upload(const char* id, const char* key, const
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .devid = id,
         .key = key,
         .path = "/d.json",
@@ -504,8 +488,6 @@ int atop_service_iccid_upload(const char* id, const char* key, const char *iccid
 
     /* atop_base_request object construct */
     atop_base_request_t atop_request = {
-        .host = tuya_atop_server_host_get(),
-        .port = tuya_atop_server_port_get(),
         .devid = id,
         .key = key,
         .path = "/d.json",

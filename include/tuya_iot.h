@@ -11,6 +11,7 @@ extern "C" {
 
 #include "tuya_cloud_types.h"
 #include "tuya_error_code.h"
+#include "tuya_url.h"
 
 #include "mqtt_service.h"
 #include "atop_service.h"
@@ -36,8 +37,6 @@ extern "C" {
 #define MAX_LENGTH_SCHEMA_ID   16
 #define MAX_LENGTH_SW_VER      10   // max string length of VERSION
 #define MAX_LENGTH_TOKEN       8    // max string length of TOKEN
-#define MAX_LENGTH_REGION      2    // max string length of REGIN IN TOKEN
-#define MAX_LENGTH_REGIST      4    // max string length of REGIST_KEY IN TOKEN
 
 /* tuya sdk gateway reset type */
 typedef enum {

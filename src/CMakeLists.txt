@@ -6,7 +6,6 @@ include( ${LINKSDK_DIRS}/tuyaFilePaths.cmake )
 add_library( link_core STATIC
     ${LINK_SDK_SOURCES}
     ${JSON_SOURCES}
-    "${CERTS_DIRS}/tuya_rootCA.c"
 )
 
 target_include_directories( link_core
