@@ -12,6 +12,7 @@
 |--`certs` (设备私钥，设备证书，服务端 CA 根证书) <br>
 |--`docs` (开发文档) <br>
 |--`libraries` (外部依赖库 - MQTT client, HTTP client, mbedTLS) <br>
+|--`middleware` (中间层目录，包含涂鸦需要的 MQTT 和 HTTP 接口适配实现，如果你基于 TLS 层适配，无需修改该目录) <br>
 |--`interface` (平台必要移植接口，SDK 功能接口) <br>
 |--`include` (SDK 有文件，API接口) <br>
 |--`src` (SDK 源代码) <br>
@@ -28,6 +29,7 @@
 
 
 ### 系统
+
 `void* system_malloc(size_t n);`
 分配所需的内存空间，并返回一个指向它的指针。
 

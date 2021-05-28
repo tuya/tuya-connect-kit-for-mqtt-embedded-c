@@ -439,8 +439,8 @@ int atop_service_outdoors_property_upload(const char* id, const char* key, const
 
     // {"countryCode":"86","phone":"15656065877"}
     buffer_len = snprintf(buffer, UPDATE_PROPERTY_BUFFER_LEN, 
-        "{\"property\":{\"countryCode\":\"%s\",\"phone\":\"%s\"},\"t\":%d}", 
-        countryCode, phone, timestamp);
+        "{\"devId\":\"%s\",\"property\":{\"code\":\"phoneInfo\",\"value\":{\"countryCode\":\"%s\",\"phone\":\"%s\"}},\"t\":%d}", 
+        id, countryCode, phone, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */

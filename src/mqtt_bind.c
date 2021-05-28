@@ -44,6 +44,11 @@ static void mqtt_bind_activate_token_on(tuya_mqtt_event_t* ev)
     /* get token from cJSON object */
     char* token = cJSON_GetObjectItem(data, "token")->valuestring;
     char* region = cJSON_GetObjectItem(data, "region")->valuestring;
+    char* regist_key = "pro"; // online env default
+
+    if  (cJSON_GetObjectItem(data, "env")) {
+        regist_key = cJSON_GetObjectItem(data, "env")->valuestring;
+    }
 
     if (strlen(token) > MAX_LENGTH_TOKEN) {
         TY_LOGE("token length error");
@@ -55,8 +60,14 @@ static void mqtt_bind_activate_token_on(tuya_mqtt_event_t* ev)
         return;
     }
 
+    if (strlen(regist_key) > MAX_LENGTH_REGIST) {
+        TY_LOGE("regist_key length error");
+        return;
+    }
+
     strcpy(binding->token, token);
     strcpy(binding->region, region);
+    strcpy(binding->regist_key, regist_key);
 }
 
 static int mqtt_bind_mode_start(tuya_mqtt_context_t* mqctx, const tuya_iot_config_t* config)
