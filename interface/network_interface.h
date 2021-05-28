@@ -38,13 +38,16 @@ typedef struct tls_context tls_context_t;
  * TLS networking layer to create a TLS secured socket.
  */
 typedef struct {
-	const char *pRootCALocation;                ///< Pointer to string containing the filename (including path) of the root CA file.
-	const char *pDeviceCertLocation;            ///< Pointer to string containing the filename (including path) of the device certificate.
-	const char *pDevicePrivateKeyLocation;    ///< Pointer to string containing the filename (including path) of the device private key file.
-	const char *pDestinationURL;                ///< Pointer to string containing the endpoint of the MQTT service.
-	uint16_t DestinationPort;            ///< Integer defining the connection port of the MQTT service.
-	uint32_t TimeoutMs;                ///< Unsigned integer defining the TLS handshake timeout value in milliseconds.
-	bool ServerVerificationFlag;        ///< Boolean.  True = perform server certificate hostname validation.  False = skip validation \b NOT recommended.
+	const char*     host;             /*!< Domain or IP as string */
+	uint16_t        port;             /*!< Port to connect, default depend on esp_http_client_transport_t (80 or 443) */
+	const uint8_t*  cacert;           /*!< SSL server certification, if the client requires to verify server */
+    size_t          cacert_len;       /*!< Length of the buffer pointed to by cert_pem. May be 0 for null-terminated pem */
+    const uint8_t*  client_cert;      /*!< SSL client certification, if the server requires to verify client */
+    size_t          client_cert_len;  /*!< Length of the buffer pointed to by client_cert_pem. May be 0 for null-terminated pem */
+    const uint8_t*  client_key;       /*!< SSL client key, if the server requires to verify client */
+    size_t          client_key_len;   /*!< Length of the buffer pointed to by client_key_pem. May be 0 for null-terminated pem */
+	uint32_t        timeout_ms;       /*!< Unsigned integer defining the TLS handshake timeout value in milliseconds */
+	bool            cert_verify;      /*!< Boolean.  True = perform server certificate hostname validation.  False = skip validation \b NOT recommended */
 } TLSConnectParams;
 
 /**

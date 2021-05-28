@@ -115,51 +115,50 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 	mbedtls_x509_crt_init(&(tlsDataParams->clicert));
 	mbedtls_pk_init(&(tlsDataParams->pkey));
 
-	log_debug("\n  . Seeding the random number generator...");
+	log_debug("Seeding the random number generator...");
 	mbedtls_entropy_init(&(tlsDataParams->entropy));
 	if((ret = mbedtls_ctr_drbg_seed(&(tlsDataParams->ctr_drbg), mbedtls_entropy_func, &(tlsDataParams->entropy),
 									(const unsigned char *) pers, strlen(pers))) != 0) {
-		log_error(" failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n", -ret);
+		log_error("failed! mbedtls_ctr_drbg_seed returned -0x%x", -ret);
 		return OPRT_MID_TLS_CTR_DRBG_ENTROPY_SOURCE_ERROR;
 	}
 
-	log_debug("  . Loading the CA root certificate ...");
-	ret = mbedtls_x509_crt_parse(&(tlsDataParams->cacert), (const unsigned char *)pNetwork->tlsConnectParams.pRootCALocation, 
-		strlen(pNetwork->tlsConnectParams.pRootCALocation) + 1);
+	log_debug("Loading the CA root certificate...");
+	ret = mbedtls_x509_crt_parse(&(tlsDataParams->cacert),
+								 (const unsigned char *)pNetwork->tlsConnectParams.cacert, 
+								 pNetwork->tlsConnectParams.cacert_len);
 	if(ret < 0) {
-		log_error(" failed\n  !  mbedtls_x509_crt_parse returned -0x%x while parsing root cert\n\n", -ret);
+		log_error(" failed! mbedtls_x509_crt_parse returned -0x%x while parsing root cert", -ret);
 		return OPRT_MID_TLS_X509_ROOT_CRT_PARSE_ERROR;
 	}
-	log_debug(" ok (%d skipped)\n", ret);
+	log_debug("ok (%d skipped)", ret);
 
-	if (pNetwork->tlsConnectParams.pDeviceCertLocation) {
-		log_debug("  . Loading the client cert. and key...");
+	if (pNetwork->tlsConnectParams.client_cert && pNetwork->tlsConnectParams.client_key) {
+		log_debug("Loading the client cert. and key...");
 		ret = mbedtls_x509_crt_parse(&(tlsDataParams->clicert), 
-							(const unsigned char *)pNetwork->tlsConnectParams.pDeviceCertLocation,
-							strlen(pNetwork->tlsConnectParams.pDeviceCertLocation) + 1);
+									 (const unsigned char *)pNetwork->tlsConnectParams.client_cert,
+									 pNetwork->tlsConnectParams.client_cert_len);
 		if(ret != 0) {
-			log_error(" failed\n  !  mbedtls_x509_crt_parse returned -0x%x while parsing device cert\n\n", -ret);
+			log_error("failed! mbedtls_x509_crt_parse returned -0x%x while parsing device cert", -ret);
 			return OPRT_MID_TLS_X509_DEVICE_CRT_PARSE_ERROR;
 		}
-	}
-
-	if (pNetwork->tlsConnectParams.pDevicePrivateKeyLocation) {
+		
 		ret = mbedtls_pk_parse_key(&(tlsDataParams->pkey), 
-								(const unsigned char *)pNetwork->tlsConnectParams.pDevicePrivateKeyLocation, 
-								strlen(pNetwork->tlsConnectParams.pDevicePrivateKeyLocation) + 1, NULL, 0);
+								   (const unsigned char *)pNetwork->tlsConnectParams.client_key, 
+								    pNetwork->tlsConnectParams.client_key_len, NULL, 0);
 		if(ret != 0) {
-			log_error(" failed\n  !  mbedtls_pk_parse_key returned -0x%x while parsing private key\n\n", -ret);
-			log_debug(" path : %s ", pNetwork->tlsConnectParams.pDevicePrivateKeyLocation);
+			log_error("failed! mbedtls_pk_parse_key returned -0x%x while parsing private key", -ret);
 			return OPRT_MID_TLS_PK_PRIVATE_KEY_PARSE_ERROR;
 		}
-		log_debug(" ok\n");
+		log_debug("ok");
 	}
 
-	snprintf(portBuffer, 6, "%d", pNetwork->tlsConnectParams.DestinationPort);
-	log_debug("  . Connecting to %s/%s...", pNetwork->tlsConnectParams.pDestinationURL, portBuffer);
-	if((ret = mbedtls_net_connect(&(tlsDataParams->server_fd), pNetwork->tlsConnectParams.pDestinationURL,
+	snprintf(portBuffer, 6, "%d", pNetwork->tlsConnectParams.port);
+	log_debug("Connecting to %s/%s...", pNetwork->tlsConnectParams.host, portBuffer);
+	if((ret = mbedtls_net_connect(&(tlsDataParams->server_fd), 
+								  pNetwork->tlsConnectParams.host,
 								  portBuffer, MBEDTLS_NET_PROTO_TCP)) != 0) {
-		log_error(" failed\n  ! mbedtls_net_connect returned -0x%x\n\n", -ret);
+		log_error("failed! mbedtls_net_connect returned -0x%x", -ret);
 		switch(ret) {
 			case MBEDTLS_ERR_NET_SOCKET_FAILED:
 				return OPRT_MID_TLS_NET_SOCKET_ERROR;
@@ -175,20 +174,20 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 	if(ret != 0) {
 		log_error(" failed\n  ! net_set_(non)block() returned -0x%x\n\n", -ret);
 		return OPRT_MID_TLS_CONNECTION_ERROR;
-	} log_debug(" ok\n");
+	} log_debug("ok");
 
 	mbedtls_ssl_set_bio(&(tlsDataParams->ssl), &(tlsDataParams->server_fd), mbedtls_net_send, NULL, mbedtls_net_recv_timeout);
-	mbedtls_ssl_conf_read_timeout(&(tlsDataParams->conf), pNetwork->tlsConnectParams.TimeoutMs);
+	mbedtls_ssl_conf_read_timeout(&(tlsDataParams->conf), pNetwork->tlsConnectParams.timeout_ms);
 
-	log_debug("  . Setting up the SSL/TLS structure...");
+	log_debug("Setting up the SSL/TLS structure...");
 	if((ret = mbedtls_ssl_config_defaults(&(tlsDataParams->conf), MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM,
 										  MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
-		log_error(" failed\n  ! mbedtls_ssl_config_defaults returned -0x%x\n\n", -ret);
+		log_error("failed! mbedtls_ssl_config_defaults returned -0x%x", -ret);
 		return OPRT_MID_TLS_CONNECTION_ERROR;
 	}
 
 	mbedtls_ssl_conf_verify(&(tlsDataParams->conf), _network_tls_verify_cert, NULL);
-	if(pNetwork->tlsConnectParams.ServerVerificationFlag == true) {
+	if(pNetwork->tlsConnectParams.cert_verify == true) {
 		mbedtls_ssl_conf_authmode(&(tlsDataParams->conf), MBEDTLS_SSL_VERIFY_REQUIRED);
 	} else {
 		mbedtls_ssl_conf_authmode(&(tlsDataParams->conf), MBEDTLS_SSL_VERIFY_OPTIONAL);
@@ -197,29 +196,28 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 
 	mbedtls_ssl_conf_ca_chain(&(tlsDataParams->conf), &(tlsDataParams->cacert), NULL);
 
-	if ((pNetwork->tlsConnectParams.pDeviceCertLocation) && (pNetwork->tlsConnectParams.pDevicePrivateKeyLocation)) {
-		if((ret = mbedtls_ssl_conf_own_cert(&(tlsDataParams->conf), &(tlsDataParams->clicert), &(tlsDataParams->pkey))) !=
-		0) {
-			log_error(" failed\n  ! mbedtls_ssl_conf_own_cert returned %d\n\n", ret);
+	if ((pNetwork->tlsConnectParams.client_cert) && (pNetwork->tlsConnectParams.client_key)) {
+		if((ret = mbedtls_ssl_conf_own_cert(&(tlsDataParams->conf), &(tlsDataParams->clicert), &(tlsDataParams->pkey))) !=0) {
+			log_error(" failed! mbedtls_ssl_conf_own_cert returned %d\n\n", ret);
 			return OPRT_MID_TLS_CONNECTION_ERROR;
 		}
 	}
 
 	/* Assign the resulting configuration to the SSL context. */
 	if((ret = mbedtls_ssl_setup(&(tlsDataParams->ssl), &(tlsDataParams->conf))) != 0) {
-		log_error(" failed\n  ! mbedtls_ssl_setup returned -0x%x\n\n", -ret);
+		log_error(" failed! mbedtls_ssl_setup returned -0x%x\n\n", -ret);
 		return OPRT_MID_TLS_CONNECTION_ERROR;
 	}
-	if((ret = mbedtls_ssl_set_hostname(&(tlsDataParams->ssl), pNetwork->tlsConnectParams.pDestinationURL)) != 0) {
-		log_error(" failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n", ret);
+	if((ret = mbedtls_ssl_set_hostname(&(tlsDataParams->ssl), pNetwork->tlsConnectParams.host)) != 0) {
+		log_error(" failed! mbedtls_ssl_set_hostname returned %d\n\n", ret);
 		return OPRT_MID_TLS_CONNECTION_ERROR;
 	}
 
-	log_debug("\n\nSSL state connect : %d ", tlsDataParams->ssl.state);
-	log_debug("  . Performing the SSL/TLS handshake...");
+	log_debug("SSL state connect: %d ", tlsDataParams->ssl.state);
+	log_debug("Performing the SSL/TLS handshake...");
 	while((ret = mbedtls_ssl_handshake(&(tlsDataParams->ssl))) != 0) {
 		if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-			log_error(" failed\n  ! mbedtls_ssl_handshake returned -0x%x\n", -ret);
+			log_error("failed! mbedtls_ssl_handshake returned -0x%x\n", -ret);
 			if(ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED) {
 				log_error("    Unable to verify the server's certificate. "
 							  "Either it is invalid,\n"
@@ -242,7 +240,7 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 
 	log_debug("  . Verifying peer X.509 certificate...");
 
-	if(pNetwork->tlsConnectParams.ServerVerificationFlag == true) {
+	if(pNetwork->tlsConnectParams.cert_verify == true) {
 		if((tlsDataParams->flags = mbedtls_ssl_get_verify_result(&(tlsDataParams->ssl))) != 0) {
 			char vrfy_buf[512];
 			log_error(" failed\n");
