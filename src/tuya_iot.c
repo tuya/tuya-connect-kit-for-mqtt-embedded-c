@@ -702,13 +702,47 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
     }
 
     /* Format version JSON buffer */
-    snprintf(version_buffer, VERSION_BUFFER_MAX, 
+    size_t version_len = snprintf(version_buffer, VERSION_BUFFER_MAX, 
         "[{\\\"otaChannel\\\":%d,\\\"protocolVer\\\":\\\"%s\\\",\\\"baselineVer\\\":\\\"%s\\\",\\\"softVer\\\":\\\"%s\\\"}]", 
         0, PV_VERSION, BS_VERSION, client->config.software_ver);
+
+    /* local storage read buffer*/
+    size_t readlen = VERSION_BUFFER_MAX;
+    char* readbuf = system_calloc(sizeof(char), VERSION_BUFFER_MAX);
+    if (NULL == readbuf) {
+        TY_LOGE("activate_string malloc fail.");
+        system_free(version_buffer);
+        return rt;
+    }
+
+    /* Try read activate config data */
+    char version_key[32];
+    snprintf(version_key, sizeof version_key, "%s.ver", client->config.uuid);
+    rt = local_storage_get((const char*)version_key, (uint8_t*)readbuf, &readlen);
+    if (OPRT_OK != rt) {
+        TY_LOGW("version save info not found:%d", rt);
+    }
+
+    /* Compare the version info changed? */
+    if (memcmp(version_buffer, readbuf, version_len) == 0) {
+        TY_LOGD("The verison unchanged, dont need sync.");
+        system_free(readbuf);
+        system_free(version_buffer);
+        return OPRT_OK;
+    }
 
     /* Post version info to ATOP service */
     rt = atop_service_version_update_v41(client->activate.devid, client->activate.seckey, 
                                         (const char*)version_buffer);
+    system_free(readbuf);
+    if (rt != OPRT_OK) {
+        system_free(version_buffer);
+        return rt;
+    }
+
+    /* Save version info */
+    rt = local_storage_set((const char*)version_key, version_buffer, version_len);
     system_free(version_buffer);
+
     return rt;
 }
