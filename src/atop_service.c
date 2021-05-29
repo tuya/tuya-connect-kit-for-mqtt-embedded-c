@@ -411,6 +411,60 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
     return rt;
 }
 
+int atop_service_put_rst_log_v10(const char* id, const char* key,const char *rst_buffer)
+{
+    if (NULL == id || NULL == key) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+
+    /* post data */
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(ATOP_DEFAULT_POST_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, 
+        "{%s,\"t\":%d}", rst_buffer, timestamp);
+    TY_LOGV("POST JSON:%s", buffer);
+
+    /* atop_base_request object construct */
+    atop_base_request_t atop_request = {
+        .devid = id,
+        .key = key,
+        .path = "/d.json",
+        .timestamp = timestamp,
+        .api = "atop.online.debug.log",
+        .version = NULL,
+        .data = buffer,
+        .datalen = buffer_len,
+        .user_data = NULL,
+    };
+
+    atop_base_response_t response = {0};
+
+    /* ATOP service request send */
+    rt = atop_base_request(&atop_request, &response);
+    system_free(buffer);
+    
+    bool success = response.success;
+    atop_base_response_free(&response);
+    
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_base_request error:%d", rt);
+        return rt;
+    }
+
+    if (success == false) {
+        return OPRT_COM_ERROR;
+    }
+
+    return rt;
+}
+
 int atop_service_outdoors_property_upload(const char* id, const char* key, const char *countryCode, const char *phone)
 {
     if (NULL == id || NULL == key || NULL == countryCode || NULL == phone) {
