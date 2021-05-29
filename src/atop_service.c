@@ -23,7 +23,6 @@
 
 #define ATOP_DEFAULT_POST_BUFFER_LEN (128)
 
-#define ATOP_ACTIVATE_POST_FMT "{\"productKey\":\"%s\",\"token\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\",\"cadVer\":\"1.0.3\",\"softVer\":\"%s\",\"t\":%d}"
 #define ATOP_ACTIVATE_API "tuya.device.active"
 #define ATOP_ACTIVATE_API_VERSION "4.3"
 #define CAD_VER "1.0.3" 
@@ -52,6 +51,10 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         prealloc_size += strlen(request->skill_param) + 10;
     }
 
+    if(request->devid) {
+        prealloc_size += strlen(request->devid) + 10;
+    }
+
     char* buffer = system_malloc(prealloc_size);
     if (NULL == buffer) {
         TY_LOGE("post buffer malloc fail");
@@ -64,6 +67,10 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
 
     offset = sprintf(buffer, "{\"token\":\"%s\",\"softVer\":\"%s\",\"productKey\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\",\"options\": \"%s\"",
                         request->token, request->sw_ver, request->product_key, request->pv, request->bv, "{\\\"isFK\\\":false}");
+
+    if(request->devid && strlen(request->devid) > 0) {
+        offset += sprintf(buffer + offset,",\"devId\":\"%s\"", request->devid);
+    }
     
     if(request->skill_param && strlen(request->skill_param) > 0) {
         offset += sprintf(buffer + offset,",\"skillParam\":\"%s\"", request->skill_param);

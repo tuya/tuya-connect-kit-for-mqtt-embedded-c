@@ -164,11 +164,25 @@ static int activate_response_parse(atop_base_response_t* response)
 
 static int client_activate_process(tuya_iot_client_t* client, const char* token)
 {
+    /* Try to read the already exist devId */
+    char devid_key[MAX_LENGTH_UUID + 7];
+    char devid_cache[MAX_LENGTH_DEVICE_ID] = {0};
+    size_t devid_len = MAX_LENGTH_DEVICE_ID;
+    bool exist_devid = false;
+
+    snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.uuid);
+    if (local_storage_get(devid_key, devid_cache, &devid_len) == OPRT_OK) {
+        if (devid_len > 0 && strlen(devid_cache) > 0) {
+            exist_devid = true;
+        }
+    }
+
     /* acvitive request instantiate construct */
     tuya_activite_request_t activite_request = {
         .token = (const char*)token,
         .product_key = client->config.productkey,
         .uuid = client->config.uuid,
+        .devid = exist_devid ? devid_cache : NULL,
         .authkey = client->config.authkey,
         .sw_ver = client->config.software_ver,
         .skill_param = client->config.skill_param,
@@ -371,6 +385,13 @@ static int run_state_reset(tuya_iot_client_t* client)
     if (client->is_activated && tuya_mqtt_connected(&client->mqctx)) {
         tuya_mqtt_stop(&client->mqctx);
     }
+
+    /* Save devId */
+    char devid_key[32];
+    snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.uuid);
+    local_storage_set((const char*)devid_key, 
+                      (const uint8_t*)client->activate.devid,
+                      strlen(client->activate.devid));
 
     /* Clean client local data */
     return tuya_iot_activated_data_remove(client);

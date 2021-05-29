@@ -13,6 +13,7 @@ typedef struct {
     const char* token;
     const char* product_key;
     const char* uuid;
+    const char* devid;
     const char* authkey;
     const char* sw_ver;
     const char* pv;
