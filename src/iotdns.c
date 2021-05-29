@@ -87,15 +87,15 @@ static int iotdns_response_decode(const uint8_t* input, size_t ilen, tuya_endpoi
     int port = 443;
     sscanf(httpsSelfUrl, "https://%99[^/]%99[^\n]", endport->atop.host, endport->atop.path);
     endport->atop.port = (uint16_t)port;
-    TY_LOGD("host = \"%s\"", endport->atop.host);
-    TY_LOGD("port = %d", endport->atop.port);
-    TY_LOGD("path = \"%s\"", endport->atop.path);
+    TY_LOGV("endport->atop.host = \"%s\"", endport->atop.host);
+    TY_LOGV("endport->atop.port = %d", endport->atop.port);
+    TY_LOGV("endport->atop.path = \"%s\"", endport->atop.path);
 
     /* MQTT host decode */
     sscanf(mqttsSelfUrl, "%99[^:]:%99d[^\n]", endport->mqtt.host, &port);
     endport->mqtt.port = (uint16_t)port;
-    TY_LOGD("host = \"%s\"", endport->mqtt.host);
-    TY_LOGD("port = %d", endport->mqtt.port);
+    TY_LOGD("endport->mqtt.host = \"%s\"", endport->mqtt.host);
+    TY_LOGD("endport->mqtt.port = %d", endport->mqtt.port);
 
     /* cert decode */
     // base64 decode buffer
