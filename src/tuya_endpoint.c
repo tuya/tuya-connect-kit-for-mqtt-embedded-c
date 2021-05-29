@@ -130,10 +130,10 @@ int tuya_endpoint_region_regist_set(const char* region, const char* regist_key)
     if (tuya_region_regist_key_write( region, regist_key ) != OPRT_OK) {
         return OPRT_KVS_WR_FAIL;
     }
-
+    
     strcpy(endpoint_mgr.region, region);
     strcpy(endpoint_mgr.regist_key, regist_key);
-    return tuya_endpoint_update();
+    return OPRT_OK;
 }
 
 int tuya_endpoint_remove()
