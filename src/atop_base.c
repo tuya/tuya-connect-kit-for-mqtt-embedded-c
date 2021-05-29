@@ -3,7 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include "tuya_log.h"
-
+#include "tuya_url.h"
 #include "system_interface.h"
 #include "http_client_interface.h"
 #include "core_json.h"
@@ -18,8 +18,6 @@
 #define MAX_URL_LENGTH (255)
 #define DEFAULT_RESPONSE_BUFFER_LEN (1024)
 #define AES_BLOCK_SIZE (16)
-
-extern const char tuya_rootCA_pem[];
 
 typedef struct {
     char* key;
@@ -383,10 +381,10 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     TY_LOGD("http request send!");
     http_status = http_client_request(
         &(const http_client_request_t){
-            .cert_pem = tuya_rootCA_pem,
-            .cert_len = strlen(tuya_rootCA_pem),
-            .host = request->host,
-            .port = request->port,
+            .cacert = tuya_atop_server_cacert_get(),
+            .cacert_len = tuya_atop_server_cacert_length_get(),
+            .host = tuya_atop_server_host_get(),
+            .port = tuya_atop_server_port_get(),
             .method = "POST",
             .path = path_buffer,
             .headers = headers,

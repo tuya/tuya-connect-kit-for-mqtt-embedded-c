@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 /**
@@ -87,7 +88,8 @@ typedef struct {
 } tuya_meta_info_t;
 
 typedef struct {
-    const char* rootCA;
+    const uint8_t* cacert;
+    size_t cacert_len;
     const char* host;
     uint16_t port;
     uint32_t timeout;

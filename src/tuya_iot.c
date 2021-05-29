@@ -18,8 +18,6 @@
 
 #define ACTIVATE_KV_BUFFER         (255)
 
-extern const char tuya_rootCA_pem[];
-
 typedef enum {
     STATE_IDLE,
     STATE_START,
@@ -166,11 +164,25 @@ static int activate_response_parse(atop_base_response_t* response)
 
 static int client_activate_process(tuya_iot_client_t* client, const char* token)
 {
+    /* Try to read the already exist devId */
+    char devid_key[MAX_LENGTH_UUID + 7];
+    char devid_cache[MAX_LENGTH_DEVICE_ID] = {0};
+    size_t devid_len = MAX_LENGTH_DEVICE_ID;
+    bool exist_devid = false;
+
+    snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.uuid);
+    if (local_storage_get(devid_key, devid_cache, &devid_len) == OPRT_OK) {
+        if (devid_len > 0 && strlen(devid_cache) > 0) {
+            exist_devid = true;
+        }
+    }
+
     /* acvitive request instantiate construct */
     tuya_activite_request_t activite_request = {
         .token = (const char*)token,
         .product_key = client->config.productkey,
         .uuid = client->config.uuid,
+        .devid = exist_devid ? devid_cache : NULL,
         .authkey = client->config.authkey,
         .sw_ver = client->config.software_ver,
         .skill_param = client->config.skill_param,
@@ -329,7 +341,8 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
 
     /* mqtt init */
     rt = tuya_mqtt_init(&client->mqctx, &(const tuya_mqtt_config_t){
-        .rootCA = tuya_rootCA_pem,
+        .cacert = tuya_mqtt_server_cacert_get(),
+        .cacert_len = tuya_mqtt_server_cacert_length_get(),
         .host = tuya_mqtt_server_host_get(),
         .port = tuya_mqtt_server_port_get(),
         .devid = client->activate.devid,
@@ -372,6 +385,13 @@ static int run_state_reset(tuya_iot_client_t* client)
     if (client->is_activated && tuya_mqtt_connected(&client->mqctx)) {
         tuya_mqtt_stop(&client->mqctx);
     }
+
+    /* Save devId */
+    char devid_key[32];
+    snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.uuid);
+    local_storage_set((const char*)devid_key, 
+                      (const uint8_t*)client->activate.devid,
+                      strlen(client->activate.devid));
 
     /* Clean client local data */
     return tuya_iot_activated_data_remove(client);
@@ -703,13 +723,47 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
     }
 
     /* Format version JSON buffer */
-    snprintf(version_buffer, VERSION_BUFFER_MAX, 
+    size_t version_len = snprintf(version_buffer, VERSION_BUFFER_MAX, 
         "[{\\\"otaChannel\\\":%d,\\\"protocolVer\\\":\\\"%s\\\",\\\"baselineVer\\\":\\\"%s\\\",\\\"softVer\\\":\\\"%s\\\"}]", 
         0, PV_VERSION, BS_VERSION, client->config.software_ver);
+
+    /* local storage read buffer*/
+    size_t readlen = VERSION_BUFFER_MAX;
+    char* readbuf = system_calloc(sizeof(char), VERSION_BUFFER_MAX);
+    if (NULL == readbuf) {
+        TY_LOGE("activate_string malloc fail.");
+        system_free(version_buffer);
+        return rt;
+    }
+
+    /* Try read activate config data */
+    char version_key[32];
+    snprintf(version_key, sizeof version_key, "%s.ver", client->config.uuid);
+    rt = local_storage_get((const char*)version_key, (uint8_t*)readbuf, &readlen);
+    if (OPRT_OK != rt) {
+        TY_LOGW("version save info not found:%d", rt);
+    }
+
+    /* Compare the version info changed? */
+    if (memcmp(version_buffer, readbuf, version_len) == 0) {
+        TY_LOGD("The verison unchanged, dont need sync.");
+        system_free(readbuf);
+        system_free(version_buffer);
+        return OPRT_OK;
+    }
 
     /* Post version info to ATOP service */
     rt = atop_service_version_update_v41(client->activate.devid, client->activate.seckey, 
                                         (const char*)version_buffer);
+    system_free(readbuf);
+    if (rt != OPRT_OK) {
+        system_free(version_buffer);
+        return rt;
+    }
+
+    /* Save version info */
+    rt = local_storage_set((const char*)version_key, version_buffer, version_len);
     system_free(version_buffer);
+
     return rt;
 }

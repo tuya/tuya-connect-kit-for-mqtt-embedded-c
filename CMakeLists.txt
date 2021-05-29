@@ -1,7 +1,7 @@
 # Project information.
 cmake_minimum_required( VERSION 3.2.0 )
 project( TuyaIoTLinkSdkEmbeddedC
-         VERSION 202104.15
+         VERSION 202105.28
          LANGUAGES C )
 
 # Allow the project to be organized into folders.
@@ -31,7 +31,6 @@ set(PLATFORM_DIR "${ROOT_DIR}/platform" CACHE INTERNAL "C SDK platform root.")
 set(LIBRARIES_DIR "${ROOT_DIR}/libraries" CACHE INTERNAL "C SDK libraries root.")
 set(LINKSDK_DIRS "${ROOT_DIR}")
 set(INTERFACE_DIRS "${ROOT_DIR}/interface")
-set(CERTS_DIRS "${ROOT_DIR}/certs")
 
 # Configure options to always show in CMake GUI.
 option( BUILD_TESTS

@@ -4,23 +4,53 @@
 #include "tuya_error_code.h"
 #include "storage_interface.h"
 
-#define MAX_LENGTH_REGION         (2)    // max string length of REGIN IN TOKEN
-#define MAX_LENGTH_REGIST         (4)    // max string length of REGIST_KEY IN TOKEN
-#define MAX_LENGTH_TUYA_HOST      (64)
+static const uint8_t default_tuya_cacert[] = {\
+"-----BEGIN CERTIFICATE-----\r\n"\
+"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\r\n"\
+"-----END CERTIFICATE-----\r\n"};
 
-typedef struct {
-    char region[MAX_LENGTH_REGION + 1]; // get from token
-    struct {
-        char host[MAX_LENGTH_TUYA_HOST + 1];
-        uint16_t port;
-        char* cert;
-    } atop;
-    struct {
-        char host[MAX_LENGTH_TUYA_HOST + 1];
-        uint16_t port;
-        char* cert;
-    } mqtt;
-} tuya_endpoint_t;
+extern int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint_t* endport);
 
 typedef struct {
     char regist[MAX_LENGTH_REGIST + 1];
@@ -110,36 +140,53 @@ int tuya_region_regist_key_set( const char* region, const char* regist_key )
     return tuya_region_regist_key_load();
 }
 
-int tuya_region_regist_key_load()
+static int default_endpoint_get( const char* region, const char* regist_key, tuya_endpoint_t* endpoint )
 {
-    int ret;
-    ret = tuya_region_regist_key_read(endpoint_mgr.region, endpoint_mgr.regist_key);
-
-    /* Load default domain */
     int i;
 
     /* find the defalut regist key */
     tuya_cloud_environment_t* env = (tuya_cloud_environment_t*)&default_env_list[0]; // defalut
     for (i = 0; i < sizeof(default_env_list)/sizeof(tuya_cloud_environment_t); i++) {
-        if (memcmp(endpoint_mgr.regist_key, default_env_list[i].regist, sizeof(endpoint_mgr.regist_key)) == 0) {
+        if (memcmp(regist_key, default_env_list[i].regist, strlen(regist_key)) == 0) {
             env = (tuya_cloud_environment_t*)&default_env_list[i];
             TY_LOGI("Environment:%s", default_env_list[i].regist);
             break;
         }
     }
-
+    
     /* find the default region */
-    tuya_endpoint_t* endpoint = (tuya_endpoint_t*)&env->endpoint[0]; // defalut
+    *endpoint = env->endpoint[0]; // defalut
     for (i = 0; i < env->endpoint_num; i++) {
-        if (memcmp(endpoint_mgr.region, env->endpoint[i].region, sizeof(endpoint_mgr.region)) == 0) {
-            endpoint = (tuya_endpoint_t*)&env->endpoint[i];
+        if (memcmp(region, env->endpoint[i].region, strlen(region)) == 0) {
+            *endpoint = env->endpoint[i];
             TY_LOGI("Host region:%s", env->endpoint[i].region);
             break;
         }
     }
 
-    endpoint_mgr.endpoint = *endpoint;
+    /* default CA cert*/
+    endpoint->atop.cert = (uint8_t*)default_tuya_cacert;
+    endpoint->atop.cert_len = sizeof(default_tuya_cacert);
+    endpoint->mqtt.cert = (uint8_t*)default_tuya_cacert;
+    endpoint->mqtt.cert_len = sizeof(default_tuya_cacert);
     return OPRT_OK;
+}
+
+int tuya_region_regist_key_load()
+{
+    int ret = tuya_region_regist_key_read(endpoint_mgr.region, endpoint_mgr.regist_key);
+    
+    ret = iotdns_cloud_endpoint_get(endpoint_mgr.region, 
+                                    endpoint_mgr.regist_key, 
+                                    &endpoint_mgr.endpoint);
+    if (ret == OPRT_OK) {
+        return OPRT_OK;
+    }
+
+    /* Load default domain */
+    return default_endpoint_get((const char*)endpoint_mgr.region, 
+                                (const char*)endpoint_mgr.regist_key, 
+                                &endpoint_mgr.endpoint);
 }
 
 const char* tuya_atop_server_host_get()
@@ -152,6 +199,16 @@ uint16_t tuya_atop_server_port_get()
     return endpoint_mgr.endpoint.atop.port;
 }
 
+const uint8_t* tuya_atop_server_cacert_get()
+{
+    return (const uint8_t*)endpoint_mgr.endpoint.atop.cert;
+}
+
+size_t tuya_atop_server_cacert_length_get()
+{
+    return endpoint_mgr.endpoint.atop.cert_len;
+}
+
 const char* tuya_mqtt_server_host_get()
 {
     return endpoint_mgr.endpoint.mqtt.host;
@@ -160,4 +217,14 @@ const char* tuya_mqtt_server_host_get()
 uint16_t tuya_mqtt_server_port_get()
 {
     return endpoint_mgr.endpoint.mqtt.port;
+}
+
+const uint8_t* tuya_mqtt_server_cacert_get()
+{
+    return (const uint8_t*)endpoint_mgr.endpoint.mqtt.cert;
+}
+
+size_t tuya_mqtt_server_cacert_length_get()
+{
+    return endpoint_mgr.endpoint.mqtt.cert_len;
 }

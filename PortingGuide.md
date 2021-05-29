@@ -9,7 +9,6 @@
 该SDK的C代码文件通过以下目录结构提供（请参见文件夹名称后面的注释以获取其内容说明）。
 
 当前 SDK 的目录结构
-|--`certs` (设备私钥，设备证书，服务端 CA 根证书) <br>
 |--`docs` (开发文档) <br>
 |--`libraries` (外部依赖库 - MQTT client, HTTP client, mbedTLS) <br>
 |--`middleware` (中间层目录，包含涂鸦需要的 MQTT 和 HTTP 接口适配实现，如果你基于 TLS 层适配，无需修改该目录) <br>

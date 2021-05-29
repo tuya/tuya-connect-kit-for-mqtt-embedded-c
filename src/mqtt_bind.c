@@ -14,8 +14,6 @@
 
 #define MQTT_BIND_NET_TIMEOUT         (5000)
 
-extern const char tuya_rootCA_pem[];
-
 typedef enum {
     STATE_MQTT_BIND_START,
     STATE_MQTT_BIND_COMPLETE,
@@ -76,7 +74,8 @@ static int mqtt_bind_mode_start(tuya_mqtt_context_t* mqctx, const tuya_iot_confi
 
     /* mqtt init */
     rt = tuya_mqtt_init(mqctx, &(const tuya_mqtt_config_t){
-        .rootCA = tuya_rootCA_pem,
+        .cacert = tuya_mqtt_server_cacert_get(),
+        .cacert_len = tuya_mqtt_server_cacert_length_get(),
         .host = tuya_mqtt_server_host_get(),
         .port = tuya_mqtt_server_port_get(),
         .uuid = config->uuid,

@@ -106,11 +106,12 @@ http_client_status_t http_client_request( const http_client_request_t* request,
     NetworkContext_t network;
     
     rt = network_tls_init(&network, &(const TLSConnectParams){
-            .pRootCALocation = request->cert_pem,
-            .pDestinationURL = request->host,
-            .DestinationPort = request->port,
-            .TimeoutMs = request->timeout_ms,
-            .ServerVerificationFlag = true
+            .cacert = request->cacert,
+            .cacert_len = request->cacert_len,
+            .host = request->host,
+            .port = request->port,
+            .timeout_ms = request->timeout_ms,
+            .cert_verify = true
     });
 
     if (OPRT_OK != rt) {

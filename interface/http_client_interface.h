@@ -25,8 +25,8 @@ typedef struct http_client_request {
     const char*           host;
     uint16_t              port;
     const char*           path;
-    const char*           cert_pem;
-    size_t                cert_len;
+    const uint8_t*        cacert;
+    size_t                cacert_len;
     const char*           method;
     http_client_header_t* headers;
     uint8_t               headers_count;

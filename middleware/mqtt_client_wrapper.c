@@ -102,11 +102,12 @@ mqtt_client_status_t mqtt_client_init(void* client, const mqtt_client_config_t* 
     /* TLS pre init */
 	int ret = network_tls_init(&context->network, 
         &(const TLSConnectParams){
-            .pRootCALocation = context->config.cert_pem,
-            .pDestinationURL = context->config.host,
-            .DestinationPort = context->config.port,
-            .TimeoutMs = context->config.timeout_ms,
-            .ServerVerificationFlag = true,
+            .cacert = context->config.cacert,
+            .cacert_len = context->config.cacert_len,
+            .host = context->config.host,
+            .port = context->config.port,
+            .timeout_ms = context->config.timeout_ms,
+            .cert_verify = true,
 	});
 	if (OPRT_OK != ret) {
 		log_error("network_tls_init fail:%d", ret);

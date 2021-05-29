@@ -240,7 +240,8 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 
 	/* MQTT Client init */
 	const mqtt_client_config_t mqtt_config = {
-		.cert_pem = config->rootCA,
+		.cacert = config->cacert,
+		.cacert_len = config->cacert_len,
 		.host = config->host,
 		.port = config->port,
 		.keepalive = MQTT_KEEPALIVE_INTERVALIN,
