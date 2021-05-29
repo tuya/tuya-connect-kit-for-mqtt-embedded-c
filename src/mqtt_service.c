@@ -408,9 +408,6 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 										  buffer_len, 
 										  MQTT_QOS_1);
 	system_free(buffer);
-	if (0 == msgid) {
-		return OPRT_COM_ERROR;
-	}
 	return msgid;
 }
 

@@ -57,7 +57,7 @@ typedef struct {
  */
 struct NetworkContext {
 	int (*connect)(NetworkContext_t *, const TLSConnectParams *);
-	int (*read) (NetworkContext_t *, unsigned char *, size_t);   ///< Function pointer pointing to the network function to read from the network
+	int (*read)(NetworkContext_t *, unsigned char *, size_t);   ///< Function pointer pointing to the network function to read from the network
 	int (*write)(NetworkContext_t *, const unsigned char *, size_t);    ///< Function pointer pointing to the network function to write to the network
 	int (*disconnect)(NetworkContext_t *);    ///< Function pointer pointing to the network function to disconnect from the network
 	int (*destroy)(NetworkContext_t *);        ///< Function pointer pointing to the network function to destroy the network object

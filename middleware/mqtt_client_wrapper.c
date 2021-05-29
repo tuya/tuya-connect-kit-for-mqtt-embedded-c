@@ -147,11 +147,8 @@ mqtt_client_status_t mqtt_client_init(void* client, const mqtt_client_config_t* 
 mqtt_client_status_t mqtt_client_deinit(void* client)
 {
     mqtt_client_context_t* context = (mqtt_client_context_t*)client;
-    MQTTStatus_t mqtt_status;
-
     context->network.disconnect(&context->network);
     context->network.destroy(&context->network);
-
     return MQTT_STATUS_SUCCESS;
 }
 

@@ -546,7 +546,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
             client->event.type = TUYA_DATE_TYPE_STRING;
             client->event.value.asString = client->binding->token;
             iot_dispatch_event(client);
-            
+
             /* Take token go to activate */
             client->nextstate = STATE_ACTIVATING;
         }

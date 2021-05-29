@@ -97,8 +97,8 @@ static int tuya_region_regist_key_write( const char* region, const char* regist_
     }
 
     /* Write kv storage */
-    local_storage_set("binding.region", region, strlen(region) + 1);
-    local_storage_set("binding.regist_key", regist_key, strlen(regist_key) + 1);
+    local_storage_set("binding.region", (const uint8_t*)region, strlen(region) + 1);
+    local_storage_set("binding.regist_key", (const uint8_t*)regist_key, strlen(regist_key) + 1);
 
     return OPRT_OK;
 }
@@ -130,7 +130,7 @@ int tuya_endpoint_region_regist_set(const char* region, const char* regist_key)
     if (tuya_region_regist_key_write( region, regist_key ) != OPRT_OK) {
         return OPRT_KVS_WR_FAIL;
     }
-    
+
     strcpy(endpoint_mgr.region, region);
     strcpy(endpoint_mgr.regist_key, regist_key);
     return OPRT_OK;

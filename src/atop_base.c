@@ -87,7 +87,6 @@ static int atop_request_data_encode(const char* key,
         return OPRT_INVALID_PARM;        
     }
 
-    int rt = OPRT_OK;
     int printlen = 0;
     int i;
 
@@ -119,7 +118,7 @@ static int atop_request_data_encode(const char* key,
 
     system_free(encrypted_buffer);
     *olen = printlen;
-    return 0;
+    return ret;
 }
 
 static int atop_response_result_decrpyt( const char* key,
@@ -271,7 +270,6 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     }
 
     int rt = OPRT_OK;
-    int i;
     http_client_status_t http_status;
 
     /* user data */
