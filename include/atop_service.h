@@ -43,6 +43,8 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
 
 int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop_base_response_t* response);
 
+int atop_service_put_rst_log_v10(const char* id, const char* key,const char *rst_buffer);
+
 int atop_service_outdoors_property_upload(const char* id, const char* key, const char *countryCode, const char *phone);
 
 int atop_service_iccid_upload(const char* id, const char* key, const char *iccid);
