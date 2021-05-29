@@ -9,8 +9,6 @@ extern "C" {
 #endif
 
 typedef struct {
-    const char* host;
-    uint16_t    port;
     const char* path;
     const char* key;
     const char* header;

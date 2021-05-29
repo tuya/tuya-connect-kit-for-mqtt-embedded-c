@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "tuya_url.h"
+#include "tuya_endpoint.h"
 #include "tuya_log.h"
 #include "cJSON.h"
 #include "base64.h"
@@ -78,10 +78,8 @@ static int iotdns_response_decode(const uint8_t* input, size_t ilen, tuya_endpoi
     char* httpsSelfUrl = cJSON_GetObjectItem(cJSON_GetObjectItem(root, "httpsSelfUrl"), "addr")->valuestring;
     char* mqttsSelfUrl = cJSON_GetObjectItem(cJSON_GetObjectItem(root, "mqttsSelfUrl"), "addr")->valuestring;
     char* caArr0 = cJSON_GetArrayItem(cJSON_GetObjectItem(root, "caArr"), 0)->valuestring;
-
-    TY_LOGD("httpsSelfUrl:%s", httpsSelfUrl);
-    TY_LOGD("mqttsSelfUrl:%s", mqttsSelfUrl);
-    // TY_LOGD("caArr0:%s", caArr0);
+    TY_LOGV("httpsSelfUrl:%s", httpsSelfUrl);
+    TY_LOGV("mqttsSelfUrl:%s", mqttsSelfUrl);
 
     /* ATOP url decode */
     int port = 443;
@@ -94,8 +92,8 @@ static int iotdns_response_decode(const uint8_t* input, size_t ilen, tuya_endpoi
     /* MQTT host decode */
     sscanf(mqttsSelfUrl, "%99[^:]:%99d[^\n]", endport->mqtt.host, &port);
     endport->mqtt.port = (uint16_t)port;
-    TY_LOGD("endport->mqtt.host = \"%s\"", endport->mqtt.host);
-    TY_LOGD("endport->mqtt.port = %d", endport->mqtt.port);
+    TY_LOGV("endport->mqtt.host = \"%s\"", endport->mqtt.host);
+    TY_LOGV("endport->mqtt.port = %d", endport->mqtt.port);
 
     /* cert decode */
     // base64 decode buffer
@@ -153,7 +151,7 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
     size_t response_buffer_length = 1024 * 6;
 
     /* response buffer make */
-    response_buffer = system_malloc(response_buffer_length);
+    response_buffer = system_calloc(1, response_buffer_length);
     if (NULL == response_buffer) {
         TY_LOGE("response_buffer malloc fail");
         system_free(body_buffer);

@@ -6,7 +6,7 @@
 #include "tuya_error_code.h"
 #include "tuya_log.h"
 #include "tuya_iot.h"
-#include "tuya_url.h"
+#include "tuya_endpoint.h"
 
 #include "system_interface.h"
 #include "mqtt_service.h"
@@ -74,10 +74,10 @@ static int mqtt_bind_mode_start(tuya_mqtt_context_t* mqctx, const tuya_iot_confi
 
     /* mqtt init */
     rt = tuya_mqtt_init(mqctx, &(const tuya_mqtt_config_t){
-        .cacert = tuya_mqtt_server_cacert_get(),
-        .cacert_len = tuya_mqtt_server_cacert_length_get(),
-        .host = tuya_mqtt_server_host_get(),
-        .port = tuya_mqtt_server_port_get(),
+        .cacert = tuya_endpoint_get()->mqtt.cert,
+        .cacert_len =  tuya_endpoint_get()->mqtt.cert_len,
+        .host =  tuya_endpoint_get()->mqtt.host,
+        .port = tuya_endpoint_get()->mqtt.port,
         .uuid = config->uuid,
         .authkey = config->authkey,
         .timeout = MQTT_BIND_NET_TIMEOUT,

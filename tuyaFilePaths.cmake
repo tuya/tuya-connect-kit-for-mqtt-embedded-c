@@ -13,7 +13,7 @@ set( LINK_SDK_SOURCES
      "${LINKSDK_DIRS}/src/mqtt_service.c"
      "${LINKSDK_DIRS}/src/mqtt_bind.c"
      "${LINKSDK_DIRS}/src/tuya_iot.c" 
-     "${LINKSDK_DIRS}/src/tuya_url.c" 
+     "${LINKSDK_DIRS}/src/tuya_endpoint.c" 
      "${LINKSDK_DIRS}/src/iotdns.c" 
 )
 

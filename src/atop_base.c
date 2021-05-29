@@ -3,7 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include "tuya_log.h"
-#include "tuya_url.h"
+#include "tuya_endpoint.h"
 #include "system_interface.h"
 #include "http_client_interface.h"
 #include "core_json.h"
@@ -381,10 +381,10 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     TY_LOGD("http request send!");
     http_status = http_client_request(
         &(const http_client_request_t){
-            .cacert = tuya_atop_server_cacert_get(),
-            .cacert_len = tuya_atop_server_cacert_length_get(),
-            .host = tuya_atop_server_host_get(),
-            .port = tuya_atop_server_port_get(),
+            .cacert = tuya_endpoint_get()->atop.cert,
+            .cacert_len = tuya_endpoint_get()->atop.cert_len,
+            .host = tuya_endpoint_get()->atop.host,
+            .port = tuya_endpoint_get()->atop.port,
             .method = "POST",
             .path = path_buffer,
             .headers = headers,
