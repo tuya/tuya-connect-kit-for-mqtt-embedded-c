@@ -303,16 +303,10 @@ int tuya_mqtt_stop(tuya_mqtt_context_t* context)
 
 	mqtt_client_status_t mqtt_status;
 	mqtt_status = mqtt_client_unsubscribe(context->mqttctx, context->signature.topic_in, 1);
-	if (MQTT_STATUS_SUCCESS != mqtt_status) {
-		TY_LOGE("MQTT unsubscribe fail");
-	}
-	TY_LOGD("MQTT unsubscribe");
+	TY_LOGD("MQTT unsubscribe result:%d", mqtt_status);
 
 	mqtt_status = mqtt_client_disconnect(context->mqttctx);
-	if (MQTT_STATUS_SUCCESS != mqtt_status) {
-		TY_LOGE("MQTT disconnect fail");
-	}
-	TY_LOGD("MQTT disconnect.");
+	TY_LOGD("MQTT disconnect result:%d", mqtt_status);
 
 	context->manual_disconnect = true;
 	return OPRT_OK;
