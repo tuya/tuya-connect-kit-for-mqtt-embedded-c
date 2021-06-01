@@ -8,7 +8,6 @@
 extern "C" {
 #endif
 
-
 typedef struct {
     const char* token;
     const char* product_key;
@@ -18,6 +17,8 @@ typedef struct {
     const char* sw_ver;
     const char* pv;
     const char* bv;
+    const char* modules;
+    const char* feature;
     const char* skill_param;
     size_t buflen_custom;
     const void* user_data;

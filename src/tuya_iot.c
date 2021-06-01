@@ -185,6 +185,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
         .devid = exist_devid ? devid_cache : NULL,
         .authkey = client->config.authkey,
         .sw_ver = client->config.software_ver,
+        .modules = client->config.modules,
         .skill_param = client->config.skill_param,
         .bv = BS_VERSION,
         .pv = PV_VERSION,
@@ -719,19 +720,38 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
     int rt = OPRT_OK;
 
     #define VERSION_BUFFER_MAX (128)
-    char* version_buffer = system_malloc(VERSION_BUFFER_MAX);
+    size_t prealloc_size = VERSION_BUFFER_MAX;
+    if (client->config.modules) {
+        prealloc_size += strlen(client->config.modules) + 10;
+    }
+
+    char* version_buffer = system_malloc(prealloc_size);
     if (version_buffer == NULL) {
         return OPRT_INVALID_PARM;
     }
 
     /* Format version JSON buffer */
-    size_t version_len = snprintf(version_buffer, VERSION_BUFFER_MAX, 
-        "[{\\\"otaChannel\\\":%d,\\\"protocolVer\\\":\\\"%s\\\",\\\"baselineVer\\\":\\\"%s\\\",\\\"softVer\\\":\\\"%s\\\"}]", 
+    size_t version_len = 0;
+    if (client->config.modules) {
+        /* extension modules version */
+        version_len += sprintf(version_buffer + version_len, "%s", client->config.modules);
+        version_len -= 1; // remove ']'
+        version_len += sprintf(version_buffer + version_len, ",");
+    } else {
+        version_len += sprintf(version_buffer + version_len, "[");
+    }
+
+    /* Main firmware information */
+    version_len += sprintf(version_buffer + version_len, 
+        "{\\\"otaChannel\\\":%d,\\\"protocolVer\\\":\\\"%s\\\",\\\"baselineVer\\\":\\\"%s\\\",\\\"softVer\\\":\\\"%s\\\"}", 
         0, PV_VERSION, BS_VERSION, client->config.software_ver);
 
+    version_len += sprintf(version_buffer + version_len, "]");
+    TY_LOGW("%s", version_buffer);
+
     /* local storage read buffer*/
-    size_t readlen = VERSION_BUFFER_MAX;
-    char* readbuf = system_calloc(sizeof(char), VERSION_BUFFER_MAX);
+    size_t readlen = prealloc_size;
+    char* readbuf = system_calloc(sizeof(char), prealloc_size);
     if (NULL == readbuf) {
         TY_LOGE("activate_string malloc fail.");
         system_free(version_buffer);
@@ -768,4 +788,10 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
     system_free(version_buffer);
 
     return rt;
+}
+
+int tuya_iot_extension_modules_version_update(tuya_iot_client_t* client, const char* version)
+{
+    client->config.modules = version;
+    return tuya_iot_version_update_sync(client);
 }

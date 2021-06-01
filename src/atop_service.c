@@ -39,12 +39,20 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     #define ACTIVATE_POST_BUFFER_LEN (255)
     size_t prealloc_size = ACTIVATE_POST_BUFFER_LEN;
 
-    if(request->skill_param) {
-        prealloc_size += strlen(request->skill_param) + 10;
-    }
-
     if(request->devid) {
         prealloc_size += strlen(request->devid) + 10;
+    }
+
+    if(request->modules) {
+        prealloc_size += strlen(request->modules) + 10;
+    }
+
+    if(request->feature) {
+        prealloc_size += strlen(request->feature) + 10;
+    }
+    
+    if(request->skill_param) {
+        prealloc_size += strlen(request->skill_param) + 10;
     }
 
     char* buffer = system_malloc(prealloc_size);
@@ -62,6 +70,14 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
 
     if(request->devid && strlen(request->devid) > 0) {
         offset += sprintf(buffer + offset,",\"devId\":\"%s\"", request->devid);
+    }
+
+    if(request->modules && strlen(request->modules) > 0) {
+        offset += sprintf(buffer + offset,",\"modules\":\"%s\"", request->modules);
+    }
+
+    if(request->feature && strlen(request->feature) > 0) {
+        offset += sprintf(buffer + offset,",\"feature\":\"%s\"", request->feature);
     }
     
     if(request->skill_param && strlen(request->skill_param) > 0) {
