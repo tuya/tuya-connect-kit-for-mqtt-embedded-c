@@ -114,6 +114,7 @@ typedef struct {
     const char* uuid;
     const char* authkey;
     const char* software_ver;
+    const char* modules;
     const char* skill_param;
     event_handle_cb_t event_handler;
 } tuya_iot_config_t;
@@ -248,6 +249,15 @@ int tuya_iot_token_get_port_register(tuya_iot_client_t* client, tuya_activate_to
  * @return int - OPRT_OK successful or error code. 
  */
 int tuya_iot_version_update_sync(tuya_iot_client_t* client);
+
+/**
+ * @brief Synchronously update the client extension modules version information.
+ * 
+ * @param client - The Tuya client context.
+ * @param version - New extension modules verison.
+ * @return int - OPRT_OK successful or error code. 
+ */
+int tuya_iot_extension_modules_version_update(tuya_iot_client_t* client, const char* version);
 
 #ifdef __cplusplus
 }

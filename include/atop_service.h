@@ -8,7 +8,6 @@
 extern "C" {
 #endif
 
-
 typedef struct {
     const char* token;
     const char* product_key;
@@ -18,6 +17,8 @@ typedef struct {
     const char* sw_ver;
     const char* pv;
     const char* bv;
+    const char* modules;
+    const char* feature;
     const char* skill_param;
     size_t buflen_custom;
     const void* user_data;
@@ -42,6 +43,8 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
 int atop_service_version_update_v41(const char* id, const char* key, const char *versions);
 
 int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop_base_response_t* response);
+
+int atop_service_put_rst_log_v10(const char* id, const char* key,const char *rst_buffer);
 
 int atop_service_outdoors_property_upload(const char* id, const char* key, const char *countryCode, const char *phone);
 

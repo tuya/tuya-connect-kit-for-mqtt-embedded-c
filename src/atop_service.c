@@ -22,16 +22,9 @@
 
 #define ATOP_DEFAULT_POST_BUFFER_LEN (128)
 
-#define ATOP_ACTIVATE_API "tuya.device.active"
-#define ATOP_ACTIVATE_API_VERSION "4.3"
 #define CAD_VER "1.0.3" 
 #define CD_VER "1.0.0"
-
-#define ATOP_RESET_API "tuya.device.reset"
-#define ATOP_RESET_API_VERSION "4.0"
-
-#define ATOP_GW_DYN_CFG_GET "tuya.device.dynamic.config.get"
-#define ATOP_GW_DYN_CFG_GET_VER "1.0"
+#define ATTRIBUTE_OTA  (11)
 
 int atop_service_activate_request(const tuya_activite_request_t* request, 
                                         atop_base_response_t* response)
@@ -46,12 +39,20 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     #define ACTIVATE_POST_BUFFER_LEN (255)
     size_t prealloc_size = ACTIVATE_POST_BUFFER_LEN;
 
-    if(request->skill_param) {
-        prealloc_size += strlen(request->skill_param) + 10;
-    }
-
     if(request->devid) {
         prealloc_size += strlen(request->devid) + 10;
+    }
+
+    if(request->modules) {
+        prealloc_size += strlen(request->modules) + 10;
+    }
+
+    if(request->feature) {
+        prealloc_size += strlen(request->feature) + 10;
+    }
+    
+    if(request->skill_param) {
+        prealloc_size += strlen(request->skill_param) + 10;
     }
 
     char* buffer = system_malloc(prealloc_size);
@@ -70,10 +71,21 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     if(request->devid && strlen(request->devid) > 0) {
         offset += sprintf(buffer + offset,",\"devId\":\"%s\"", request->devid);
     }
+
+    if(request->modules && strlen(request->modules) > 0) {
+        offset += sprintf(buffer + offset,",\"modules\":\"%s\"", request->modules);
+    }
+
+    if(request->feature && strlen(request->feature) > 0) {
+        offset += sprintf(buffer + offset,",\"feature\":\"%s\"", request->feature);
+    }
     
     if(request->skill_param && strlen(request->skill_param) > 0) {
         offset += sprintf(buffer + offset,",\"skillParam\":\"%s\"", request->skill_param);
     }
+
+    /* default support device OTA */
+    offset += sprintf(buffer + offset,",\"devAttribute\":%u", 1 << ATTRIBUTE_OTA);
 
     offset += sprintf(buffer + offset,",\"cadVer\":\"%s\",\"cdVer\":\"%s\",\"t\":%d}",
                         CAD_VER, CD_VER, timestamp);
@@ -86,8 +98,8 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         .key = request->authkey,
         .path = "/d.json",
         .timestamp = timestamp,
-        .api = ATOP_ACTIVATE_API,
-        .version = ATOP_ACTIVATE_API_VERSION,
+        .api = "tuya.device.active",
+        .version = "4.4",
         .data = buffer,
         .datalen = offset,
         .buflen_custom = request->buflen_custom,
@@ -130,8 +142,8 @@ int atop_service_client_reset(const char* id, const char* key)
         .key = key,
         .path = "/d.json",
         .timestamp = system_timestamp(),
-        .api = ATOP_RESET_API,
-        .version = ATOP_RESET_API_VERSION,
+        .api = "tuya.device.reset",
+        .version = "4.0",
         .data = buffer,
         .datalen = buffer_len,
         .user_data = NULL
@@ -200,8 +212,8 @@ int atop_service_dynamic_cfg_get_v20(const char* id, const char* key, HTTP_DYNAM
         .key = key,
         .path = "/d.json",
         .timestamp = timestamp,
-        .api = ATOP_GW_DYN_CFG_GET,
-        .version = ATOP_GW_DYN_CFG_GET_VER,
+        .api = "tuya.device.dynamic.config.get",
+        .version = "2.0",
         .data = buffer,
         .datalen = buffer_len,
         .user_data = NULL
@@ -385,6 +397,60 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
         .timestamp = system_timestamp(),
         .api = "tuya.device.versions.update",
         .version = "4.1",
+        .data = buffer,
+        .datalen = buffer_len,
+        .user_data = NULL,
+    };
+
+    atop_base_response_t response = {0};
+
+    /* ATOP service request send */
+    rt = atop_base_request(&atop_request, &response);
+    system_free(buffer);
+    
+    bool success = response.success;
+    atop_base_response_free(&response);
+    
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_base_request error:%d", rt);
+        return rt;
+    }
+
+    if (success == false) {
+        return OPRT_COM_ERROR;
+    }
+
+    return rt;
+}
+
+int atop_service_put_rst_log_v10(const char* id, const char* key,const char *rst_buffer)
+{
+    if (NULL == id || NULL == key) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+
+    /* post data */
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(ATOP_DEFAULT_POST_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, 
+        "{%s,\"t\":%d}", rst_buffer, timestamp);
+    TY_LOGV("POST JSON:%s", buffer);
+
+    /* atop_base_request object construct */
+    atop_base_request_t atop_request = {
+        .devid = id,
+        .key = key,
+        .path = "/d.json",
+        .timestamp = timestamp,
+        .api = "atop.online.debug.log",
+        .version = NULL,
         .data = buffer,
         .datalen = buffer_len,
         .user_data = NULL,
