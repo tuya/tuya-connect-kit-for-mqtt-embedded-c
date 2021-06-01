@@ -1,8 +1,9 @@
 #include <stdint.h>
-#include "tuya_url.h"
+#include "tuya_endpoint.h"
 #include "tuya_log.h"
 #include "tuya_error_code.h"
 #include "storage_interface.h"
+#include "system_interface.h"
 
 static const uint8_t default_tuya_cacert[] = {\
 "-----BEGIN CERTIFICATE-----\r\n"\
@@ -88,7 +89,6 @@ const tuya_cloud_environment_t default_env_list[] = {
  
 static endpoint_management_t endpoint_mgr;
 
-
 static int tuya_region_regist_key_write( const char* region, const char* regist_key )
 {
     if ( NULL == region || NULL == regist_key ) {
@@ -125,19 +125,22 @@ static int tuya_region_regist_key_read( char* region, char* regist_key )
     return OPRT_OK;
 }
 
-int tuya_region_regist_key_remove()
-{
-    local_storage_del("binding.region");
-    local_storage_del("binding.regist_key");
-    return OPRT_OK;
-}
-
-int tuya_region_regist_key_set( const char* region, const char* regist_key )
+int tuya_endpoint_region_regist_set(const char* region, const char* regist_key)
 {
     if (tuya_region_regist_key_write( region, regist_key ) != OPRT_OK) {
         return OPRT_KVS_WR_FAIL;
     }
-    return tuya_region_regist_key_load();
+    
+    strcpy(endpoint_mgr.region, region);
+    strcpy(endpoint_mgr.regist_key, regist_key);
+    return OPRT_OK;
+}
+
+int tuya_endpoint_remove()
+{
+    local_storage_del("binding.region");
+    local_storage_del("binding.regist_key");
+    return OPRT_OK;
 }
 
 static int default_endpoint_get( const char* region, const char* regist_key, tuya_endpoint_t* endpoint )
@@ -172,59 +175,40 @@ static int default_endpoint_get( const char* region, const char* regist_key, tuy
     return OPRT_OK;
 }
 
-int tuya_region_regist_key_load()
+int tuya_endpoint_init()
 {
-    int ret = tuya_region_regist_key_read(endpoint_mgr.region, endpoint_mgr.regist_key);
+    int ret;
     
+    /* Read storge region & regist record */
+    tuya_region_regist_key_read(endpoint_mgr.region, endpoint_mgr.regist_key);
+
+    /* If iot-dns get fail, try to load default domain */
+    ret = default_endpoint_get((const char*)endpoint_mgr.region, 
+                               (const char*)endpoint_mgr.regist_key, 
+                               &endpoint_mgr.endpoint);
+    return ret;
+}
+
+int tuya_endpoint_update()
+{
+    int ret;
+
+    /* If iotdns has already been called, 
+     * the allocated certificate memory needs to be released. */
+    if (endpoint_mgr.endpoint.atop.cert != NULL && 
+        endpoint_mgr.endpoint.atop.cert != default_tuya_cacert) {
+        TY_LOGV("Free endpoint already exist cert.");
+        system_free(endpoint_mgr.endpoint.atop.cert);
+    }
+    
+    /* Try to get the iot-dns domain data */
     ret = iotdns_cloud_endpoint_get(endpoint_mgr.region, 
                                     endpoint_mgr.regist_key, 
                                     &endpoint_mgr.endpoint);
-    if (ret == OPRT_OK) {
-        return OPRT_OK;
-    }
-
-    /* Load default domain */
-    return default_endpoint_get((const char*)endpoint_mgr.region, 
-                                (const char*)endpoint_mgr.regist_key, 
-                                &endpoint_mgr.endpoint);
+    return ret;
 }
 
-const char* tuya_atop_server_host_get()
+const tuya_endpoint_t* tuya_endpoint_get()
 {
-    return endpoint_mgr.endpoint.atop.host;
-}
-
-uint16_t tuya_atop_server_port_get()
-{
-    return endpoint_mgr.endpoint.atop.port;
-}
-
-const uint8_t* tuya_atop_server_cacert_get()
-{
-    return (const uint8_t*)endpoint_mgr.endpoint.atop.cert;
-}
-
-size_t tuya_atop_server_cacert_length_get()
-{
-    return endpoint_mgr.endpoint.atop.cert_len;
-}
-
-const char* tuya_mqtt_server_host_get()
-{
-    return endpoint_mgr.endpoint.mqtt.host;
-}
-
-uint16_t tuya_mqtt_server_port_get()
-{
-    return endpoint_mgr.endpoint.mqtt.port;
-}
-
-const uint8_t* tuya_mqtt_server_cacert_get()
-{
-    return (const uint8_t*)endpoint_mgr.endpoint.mqtt.cert;
-}
-
-size_t tuya_mqtt_server_cacert_length_get()
-{
-    return endpoint_mgr.endpoint.mqtt.cert_len;
+    return (const tuya_endpoint_t*)&endpoint_mgr.endpoint;
 }

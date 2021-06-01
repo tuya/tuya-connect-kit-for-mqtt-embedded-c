@@ -1,5 +1,5 @@
-#ifndef __TUYA_URL_H_
-#define __TUYA_URL_H_
+#ifndef __TUYA_ENDPOINT_H_
+#define __TUYA_ENDPOINT_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -30,27 +30,15 @@ typedef struct {
     } mqtt;
 } tuya_endpoint_t;
 
-int tuya_region_regist_key_set(const char* region, const char* regist_key);
+int tuya_endpoint_init(void);
 
-int tuya_region_regist_key_remove(void);
+int tuya_endpoint_region_regist_set(const char* region, const char* regist_key);
 
-int tuya_region_regist_key_load(void);
+int tuya_endpoint_remove(void);
 
-const char* tuya_atop_server_host_get(void);
+int tuya_endpoint_update(void);
 
-uint16_t tuya_atop_server_port_get(void);
-
-const uint8_t* tuya_atop_server_cacert_get();
-
-size_t tuya_atop_server_cacert_length_get();
-
-const char* tuya_mqtt_server_host_get(void);
-
-uint16_t tuya_mqtt_server_port_get(void);
-
-const uint8_t* tuya_mqtt_server_cacert_get(void);
-
-size_t tuya_mqtt_server_cacert_length_get(void);
+const tuya_endpoint_t* tuya_endpoint_get(void);
 
 #ifdef __cplusplus
 }

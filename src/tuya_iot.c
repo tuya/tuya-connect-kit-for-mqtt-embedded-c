@@ -7,7 +7,7 @@
 #include "tuya_error_code.h"
 #include "tuya_iot.h"
 #include "tuya_log.h"
-#include "tuya_url.h"
+#include "tuya_endpoint.h"
 
 #include "system_interface.h"
 #include "storage_interface.h"
@@ -341,10 +341,10 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
 
     /* mqtt init */
     rt = tuya_mqtt_init(&client->mqctx, &(const tuya_mqtt_config_t){
-        .cacert = tuya_mqtt_server_cacert_get(),
-        .cacert_len = tuya_mqtt_server_cacert_length_get(),
-        .host = tuya_mqtt_server_host_get(),
-        .port = tuya_mqtt_server_port_get(),
+        .cacert = tuya_endpoint_get()->mqtt.cert,
+        .cacert_len = tuya_endpoint_get()->mqtt.cert_len,
+        .host = tuya_endpoint_get()->mqtt.host,
+        .port = tuya_endpoint_get()->mqtt.port,
         .devid = client->activate.devid,
         .seckey = client->activate.seckey,
         .localkey = client->activate.localkey,
@@ -434,12 +434,13 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
     cJSON_InitHooks(&hooks);
 
     /* Load Tuya cloud endpoint config */
-    tuya_region_regist_key_load();
+    tuya_endpoint_init();
 
     /* Try to read the local activation data. 
     * If the reading is successful, the device has been activated. */
     if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
         client->is_activated = true;
+        tuya_endpoint_update();
     }
 
     client->state = STATE_IDLE;
@@ -551,7 +552,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         }
 
         /* set binding.region, binding.regist_key to tuya dns server */
-        tuya_region_regist_key_set(client->binding->region, client->binding->regist_key);
+        tuya_endpoint_region_regist_set(client->binding->region, client->binding->regist_key);
         break;
 
     case STATE_ACTIVATING:
@@ -567,6 +568,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         /* Read and parse activate data */
         if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
             client->is_activated = true;
+            tuya_endpoint_update();
         }
 
         /* Retry to load activate */
@@ -655,7 +657,7 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
     /* Clean client local data */
     local_storage_del((const char*)(client->activate.schemaId));
     local_storage_del((const char*)(client->config.uuid));
-    tuya_region_regist_key_remove();
+    tuya_endpoint_remove();
     client->is_activated = false;
     TY_LOGI("Activated data remove successed");
     return OPRT_OK;

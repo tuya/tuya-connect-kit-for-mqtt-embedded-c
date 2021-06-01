@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include "tuya_url.h"
 #include "tuya_log.h"
 #include "tuya_error_code.h"
 
