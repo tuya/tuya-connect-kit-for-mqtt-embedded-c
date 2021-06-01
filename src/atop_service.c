@@ -22,16 +22,9 @@
 
 #define ATOP_DEFAULT_POST_BUFFER_LEN (128)
 
-#define ATOP_ACTIVATE_API "tuya.device.active"
-#define ATOP_ACTIVATE_API_VERSION "4.3"
 #define CAD_VER "1.0.3" 
 #define CD_VER "1.0.0"
-
-#define ATOP_RESET_API "tuya.device.reset"
-#define ATOP_RESET_API_VERSION "4.0"
-
-#define ATOP_GW_DYN_CFG_GET "tuya.device.dynamic.config.get"
-#define ATOP_GW_DYN_CFG_GET_VER "1.0"
+#define ATTRIBUTE_OTA  (11)
 
 int atop_service_activate_request(const tuya_activite_request_t* request, 
                                         atop_base_response_t* response)
@@ -75,6 +68,9 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         offset += sprintf(buffer + offset,",\"skillParam\":\"%s\"", request->skill_param);
     }
 
+    /* default support device OTA */
+    offset += sprintf(buffer + offset,",\"devAttribute\":%u", 1 << ATTRIBUTE_OTA);
+
     offset += sprintf(buffer + offset,",\"cadVer\":\"%s\",\"cdVer\":\"%s\",\"t\":%d}",
                         CAD_VER, CD_VER, timestamp);
 
@@ -86,8 +82,8 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         .key = request->authkey,
         .path = "/d.json",
         .timestamp = timestamp,
-        .api = ATOP_ACTIVATE_API,
-        .version = ATOP_ACTIVATE_API_VERSION,
+        .api = "tuya.device.active",
+        .version = "4.4",
         .data = buffer,
         .datalen = offset,
         .buflen_custom = request->buflen_custom,
@@ -130,8 +126,8 @@ int atop_service_client_reset(const char* id, const char* key)
         .key = key,
         .path = "/d.json",
         .timestamp = system_timestamp(),
-        .api = ATOP_RESET_API,
-        .version = ATOP_RESET_API_VERSION,
+        .api = "tuya.device.reset",
+        .version = "4.0",
         .data = buffer,
         .datalen = buffer_len,
         .user_data = NULL
@@ -200,8 +196,8 @@ int atop_service_dynamic_cfg_get_v20(const char* id, const char* key, HTTP_DYNAM
         .key = key,
         .path = "/d.json",
         .timestamp = timestamp,
-        .api = ATOP_GW_DYN_CFG_GET,
-        .version = ATOP_GW_DYN_CFG_GET_VER,
+        .api = "tuya.device.dynamic.config.get",
+        .version = "2.0",
         .data = buffer,
         .datalen = buffer_len,
         .user_data = NULL
