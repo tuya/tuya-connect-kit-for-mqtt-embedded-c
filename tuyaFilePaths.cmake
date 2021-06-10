@@ -8,17 +8,16 @@
 # Link SDK source files.
 # FILE(GLOB LINK_SDK_SOURCES *.c)
 set( LINK_SDK_SOURCES
-     "${LINKSDK_DIRS}/src/atop_base.c"
-     "${LINKSDK_DIRS}/src/atop_service.c"
-     "${LINKSDK_DIRS}/src/mqtt_service.c"
-     "${LINKSDK_DIRS}/src/mqtt_bind.c"
-     "${LINKSDK_DIRS}/src/tuya_iot.c" 
-     "${LINKSDK_DIRS}/src/tuya_endpoint.c" 
-     "${LINKSDK_DIRS}/src/iotdns.c" 
+     ${CMAKE_CURRENT_LIST_DIR}/src/atop_base.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/atop_service.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/mqtt_service.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/mqtt_bind.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/tuya_iot.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/tuya_endpoint.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/iotdns.c
 )
 
-
-# MQTT library Public Include directories.
+# Public Include directories.
 set( LINK_SDK_INCLUDE_PUBLIC_DIRS
-     "${LINKSDK_DIRS}/include"
+     ${CMAKE_CURRENT_LIST_DIR}/include
 )
