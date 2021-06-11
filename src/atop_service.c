@@ -1,12 +1,12 @@
 /**
  * @file atop_service.c
  * @author your name (you@domain.com)
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2020-10-29
- * 
+ *
  * @copyright Copyright (c) 2020
- * 
+ *
  */
 #include <stdio.h>
 #include <stdint.h>
@@ -14,7 +14,6 @@
 #include <assert.h>
 #include "tuya_log.h"
 #include "tuya_error_code.h"
-
 #include "system_interface.h"
 #include "atop_base.h"
 #include "atop_service.h"
@@ -22,11 +21,11 @@
 
 #define ATOP_DEFAULT_POST_BUFFER_LEN (128)
 
-#define CAD_VER "1.0.3" 
+#define CAD_VER "1.0.3"
 #define CD_VER "1.0.0"
 #define ATTRIBUTE_OTA  (11)
 
-int atop_service_activate_request(const tuya_activite_request_t* request, 
+int atop_service_activate_request(const tuya_activite_request_t* request,
                                         atop_base_response_t* response)
 {
     if (NULL == request || NULL == response) {
@@ -50,7 +49,7 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     if(request->feature) {
         prealloc_size += strlen(request->feature) + 10;
     }
-    
+
     if(request->skill_param) {
         prealloc_size += strlen(request->skill_param) + 10;
     }
@@ -79,7 +78,7 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     if(request->feature && strlen(request->feature) > 0) {
         offset += sprintf(buffer + offset,",\"feature\":\"%s\"", request->feature);
     }
-    
+
     if(request->skill_param && strlen(request->skill_param) > 0) {
         offset += sprintf(buffer + offset,",\"skillParam\":\"%s\"", request->skill_param);
     }
@@ -154,10 +153,10 @@ int atop_service_client_reset(const char* id, const char* key)
     /* ATOP service request send */
     rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
-    
+
     bool success = response.success;
     atop_base_response_free(&response);
-    
+
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;
@@ -331,7 +330,7 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, 
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN,
         "{\"type\":%d,\"upgradeStatus\":%d,\"t\":%d}", channel, status, system_timestamp());
     TY_LOGV("POST JSON:%s", buffer);
 
@@ -353,10 +352,10 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
     /* ATOP service request send */
     rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
-    
+
     bool success = response.success;
     atop_base_response_free(&response);
-    
+
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;
@@ -407,10 +406,10 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
     /* ATOP service request send */
     rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
-    
+
     bool success = response.success;
     atop_base_response_free(&response);
-    
+
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;
@@ -439,7 +438,7 @@ int atop_service_put_rst_log_v10(const char* id, const char* key,const char *rst
         return OPRT_MALLOC_FAILED;
     }
     uint32_t timestamp = system_timestamp();
-    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, 
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN,
         "{%s,\"t\":%d}", rst_buffer, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
@@ -461,10 +460,10 @@ int atop_service_put_rst_log_v10(const char* id, const char* key,const char *rst
     /* ATOP service request send */
     rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
-    
+
     bool success = response.success;
     atop_base_response_free(&response);
-    
+
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;
@@ -496,8 +495,8 @@ int atop_service_outdoors_property_upload(const char* id, const char* key, const
     }
 
     // {"countryCode":"86","phone":"15656065877"}
-    buffer_len = snprintf(buffer, UPDATE_PROPERTY_BUFFER_LEN, 
-        "{\"devId\":\"%s\",\"property\":{\"code\":\"phoneInfo\",\"value\":{\"countryCode\":\"%s\",\"phone\":\"%s\"}},\"t\":%d}", 
+    buffer_len = snprintf(buffer, UPDATE_PROPERTY_BUFFER_LEN,
+        "{\"devId\":\"%s\",\"property\":{\"code\":\"phoneInfo\",\"value\":{\"countryCode\":\"%s\",\"phone\":\"%s\"}},\"t\":%d}",
         id, countryCode, phone, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
@@ -519,10 +518,10 @@ int atop_service_outdoors_property_upload(const char* id, const char* key, const
     /* ATOP service request send */
     rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
-    
+
     bool success = response.success;
     atop_base_response_free(&response);
-    
+
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;
@@ -554,7 +553,7 @@ int atop_service_iccid_upload(const char* id, const char* key, const char *iccid
     }
 
     // {"countryCode":"86","phone":"15656065877"}
-    buffer_len = snprintf(buffer, UPDATE_PROPERTY_BUFFER_LEN, 
+    buffer_len = snprintf(buffer, UPDATE_PROPERTY_BUFFER_LEN,
         "{\"metas\":{\"catIccId\":\"%s\"},\"t\":%d}", iccid, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
@@ -576,10 +575,10 @@ int atop_service_iccid_upload(const char* id, const char* key, const char *iccid
     /* ATOP service request send */
     rt = atop_base_request(&atop_request, &response);
     system_free(buffer);
-    
+
     bool success = response.success;
     atop_base_response_free(&response);
-    
+
     if (OPRT_OK != rt) {
         TY_LOGE("atop_base_request error:%d", rt);
         return rt;

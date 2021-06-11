@@ -65,7 +65,7 @@ const uint8_t iot_dns_cert_der[] = {
 
 static int iotdns_response_decode(const uint8_t* input, size_t ilen, tuya_endpoint_t* endport)
 {
-    cJSON* root = cJSON_Parse(input);
+    cJSON* root = cJSON_Parse((const char *)input);
     if (root == NULL) {
         return OPRT_CJSON_PARSE_ERR;
     }
@@ -126,12 +126,11 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
     }
 
     int rt = OPRT_OK;
-    int i;
     http_client_status_t http_status;
 
     /* POST data buffer */
     size_t body_length = 0;
-    uint8_t* body_buffer = system_malloc(128);
+    char* body_buffer = system_malloc(128);
     if (NULL == body_buffer) {
         TY_LOGE("body_buffer malloc fail");
         return OPRT_MALLOC_FAILED;
@@ -174,9 +173,9 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
             .path = "/v1/url_config",
             .headers = headers,
             .headers_count = headers_count,
-            .body = body_buffer,
+            .body = (const uint8_t*)body_buffer,
             .body_length = body_length,
-        }, 
+        },
         &http_response);
 
     /* Release http buffer */

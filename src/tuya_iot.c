@@ -66,7 +66,7 @@ static int activate_json_string_parse(const char* str, tuya_activated_data_t* ou
         cJSON_Delete(root);
         return OPRT_CJSON_GET_ERR;
     }
-    
+
     strcpy(out->devid, cJSON_GetObjectItem(root, "devId")->valuestring);
     strcpy(out->seckey, cJSON_GetObjectItem(root, "secKey")->valuestring);
     strcpy(out->localkey, cJSON_GetObjectItem(root, "localKey")->valuestring);
@@ -119,7 +119,7 @@ static int activate_response_parse(atop_base_response_t* response)
     tuya_iot_client_t* client = (tuya_iot_client_t*)response->user_data;
     cJSON* result_root = response->result;
 
-    if (!cJSON_HasObjectItem(result_root, "schema") || 
+    if (!cJSON_HasObjectItem(result_root, "schema") ||
         !cJSON_HasObjectItem(result_root, "schemaId")) {
         TY_LOGE("not found schema");
         cJSON_Delete(result_root);
@@ -171,7 +171,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
     bool exist_devid = false;
 
     snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.uuid);
-    if (local_storage_get(devid_key, devid_cache, &devid_len) == OPRT_OK) {
+    if (local_storage_get(devid_key, (uint8_t*)devid_cache, &devid_len) == OPRT_OK) {
         if (devid_len > 0 && strlen(devid_cache) > 0) {
             exist_devid = true;
         }
@@ -291,7 +291,7 @@ static void mqtt_service_upgrade_notify_on(tuya_mqtt_event_t* ev)
     /* atop response instantiate construct */
     atop_base_response_t response = {0};
 
-    int rt = atop_service_upgrade_info_get_v44(client->activate.devid, 
+    int rt = atop_service_upgrade_info_get_v44(client->activate.devid,
                         client->activate.seckey, ota_channel, &response);
     if (rt != OPRT_OK) {
         TY_LOGE("upgrade info get error:%d", rt);
@@ -318,9 +318,9 @@ static int run_state_startup_update(tuya_iot_client_t* client)
 
     atop_base_response_t response = {0};
 
-    rt = atop_service_dynamic_cfg_get_v20(  client->activate.devid, 
-                                            client->activate.seckey, 
-                                            HTTP_DYNAMIC_CFG_ALL, 
+    rt = atop_service_dynamic_cfg_get_v20(  client->activate.devid,
+                                            client->activate.seckey,
+                                            HTTP_DYNAMIC_CFG_ALL,
                                             &response);
     if (rt != OPRT_OK) {
         TY_LOGE("dynamic_cfg_get error:%d", rt);
@@ -390,7 +390,7 @@ static int run_state_reset(tuya_iot_client_t* client)
     /* Save devId */
     char devid_key[32];
     snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.uuid);
-    local_storage_set((const char*)devid_key, 
+    local_storage_set((const char*)devid_key,
                       (const uint8_t*)client->activate.devid,
                       strlen(client->activate.devid));
 
@@ -437,7 +437,7 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
     /* Load Tuya cloud endpoint config */
     tuya_endpoint_init();
 
-    /* Try to read the local activation data. 
+    /* Try to read the local activation data.
     * If the reading is successful, the device has been activated. */
     if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
         client->is_activated = true;
@@ -469,7 +469,7 @@ int tuya_iot_reset(tuya_iot_client_t *client)
     int ret = OPRT_OK;
     if (tuya_iot_activated(client)) {
         ret = atop_service_client_reset(
-                client->activate.devid, 
+                client->activate.devid,
                 client->activate.seckey);
     }
 
@@ -509,7 +509,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         break;
 
     case STATE_DATA_LOAD:
-        /* Try to read the local activation data. 
+        /* Try to read the local activation data.
          * If the reading is successful, the device has been activated. */
         if (client->is_activated) {
             client->nextstate = STATE_STARTUP_UPDATE;
@@ -671,7 +671,6 @@ int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps
         return OPRT_INVALID_PARM;
     }
 
-    int rt = OPRT_OK;
     int printlen = 0;
     char* buffer = NULL;
 
@@ -742,8 +741,8 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
     }
 
     /* Main firmware information */
-    version_len += sprintf(version_buffer + version_len, 
-        "{\\\"otaChannel\\\":%d,\\\"protocolVer\\\":\\\"%s\\\",\\\"baselineVer\\\":\\\"%s\\\",\\\"softVer\\\":\\\"%s\\\"}", 
+    version_len += sprintf(version_buffer + version_len,
+        "{\\\"otaChannel\\\":%d,\\\"protocolVer\\\":\\\"%s\\\",\\\"baselineVer\\\":\\\"%s\\\",\\\"softVer\\\":\\\"%s\\\"}",
         0, PV_VERSION, BS_VERSION, client->config.software_ver);
 
     version_len += sprintf(version_buffer + version_len, "]");
@@ -775,7 +774,7 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
     }
 
     /* Post version info to ATOP service */
-    rt = atop_service_version_update_v41(client->activate.devid, client->activate.seckey, 
+    rt = atop_service_version_update_v41(client->activate.devid, client->activate.seckey,
                                         (const char*)version_buffer);
     system_free(readbuf);
     if (rt != OPRT_OK) {
@@ -784,7 +783,7 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
     }
 
     /* Save version info */
-    rt = local_storage_set((const char*)version_key, version_buffer, version_len);
+    rt = local_storage_set((const char*)version_key, (const uint8_t*)version_buffer, version_len);
     system_free(version_buffer);
 
     return rt;

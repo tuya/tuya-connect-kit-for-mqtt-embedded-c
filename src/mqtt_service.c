@@ -89,7 +89,7 @@ static void mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* payl
 
 	/* unpack tuya protocol 2.2 */
 	/* verison filter */
-	char ver[4] = {0}; 
+	char ver[4] = {0};
 	memcpy(ver, payload, TUYA_MQTT_VER_LEN);
 	if (strcmp(ver, "2.2") != 0) {
 		TY_LOGE("verison error:%s", ver);
@@ -125,7 +125,7 @@ static void mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* payl
 	}
 	jsonstr[jsonstr_len] = '\0';
 	TY_LOGD("MQTT recv len:%d, output:%s", (int)jsonstr_len, jsonstr);
-	
+
 	// json parse
 	cJSON *root = NULL;
     cJSON *json = NULL;
@@ -176,7 +176,7 @@ static void mqtt_client_connected_cb(void* client, void* userdata)
 {
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
 	TY_LOGD("mqtt client connected!");
-	
+
 	uint16_t msgid = mqtt_client_subscribe(client, context->signature.topic_in, MQTT_QOS_1);
 	TY_LOGD("SUBSCRIBE id:%d sent for topic %s to broker.", msgid, context->signature.topic_in);
 	context->is_connected = true;
@@ -259,7 +259,7 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
         TY_LOGE( "MQTT init failed: Status = %d.", mqtt_status);
 		return OPRT_COM_ERROR;
     }
-	
+
 	// rand
     context->sequence_out = rand() & 0xffff;
 	context->sequence_in = -1;
@@ -276,7 +276,6 @@ int tuya_mqtt_start(tuya_mqtt_context_t* context)
 		return OPRT_INVALID_PARM;
 	}
 
-	int rt = OPRT_OK;
 	TY_LOGI("clientid:%s", context->signature.clientid);
 	TY_LOGI("username:%s", context->signature.username);
 	TY_LOGD("password:%s", context->signature.password);
@@ -362,7 +361,7 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 
 	// data
 	uint8_t* encrypt_buffer = NULL;
-	rt = aes128_ecb_encode((const uint8_t*)json_buffer, printlen, 
+	rt = aes128_ecb_encode((const uint8_t*)json_buffer, printlen,
 		&encrypt_buffer, (uint32_t*)&encrpyt_len, (const uint8_t*)context->signature.cipherkey);
 	system_free(json_buffer);
 	if (OPRT_OK != rt) {
@@ -392,7 +391,7 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 	memcpy(buffer + TUYA_MQTT_SOURCE_OFFSET, source_num, TUYA_MQTT_SOURCE_LEN);
 
 	// crc32 calculate
-	uint32_t crc32_value = crc_32(buffer + TUYA_MQTT_SEQUENCE_OFFSET, 
+	uint32_t crc32_value = crc_32(buffer + TUYA_MQTT_SEQUENCE_OFFSET,
 		TUYA_MQTT_SEQUENCE_LEN + TUYA_MQTT_SOURCE_LEN + encrpyt_len);
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -402,10 +401,10 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 	buffer_len = TUYA_MQTT_DATA_OFFSET + encrpyt_len;
 
 	// report
-	uint16_t msgid = mqtt_client_publish( context->mqttctx, 
-										  context->signature.topic_out, 
-										  buffer, 
-										  buffer_len, 
+	uint16_t msgid = mqtt_client_publish( context->mqttctx,
+										  context->signature.topic_out,
+										  buffer,
+										  buffer_len,
 										  MQTT_QOS_1);
 	system_free(buffer);
 	return msgid;
