@@ -138,7 +138,7 @@ static int activate_response_parse(atop_base_response_t* response)
 
     // activate info save
     char* result_string = cJSON_PrintUnformatted(result_root);
-    const char* activate_data_key = client->config.uuid;
+    const char* activate_data_key = client->config.storage_namespace;
     TY_LOGD("result len %d :%s", (int)strlen(result_string), result_string);
     ret = local_storage_set(activate_data_key, (const uint8_t*)result_string, strlen(result_string));
     system_free(result_string);
@@ -170,7 +170,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
     size_t devid_len = MAX_LENGTH_DEVICE_ID;
     bool exist_devid = false;
 
-    snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.uuid);
+    snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.storage_namespace);
     if (local_storage_get(devid_key, (uint8_t*)devid_cache, &devid_len) == OPRT_OK) {
         if (devid_len > 0 && strlen(devid_cache) > 0) {
             exist_devid = true;
@@ -389,7 +389,7 @@ static int run_state_reset(tuya_iot_client_t* client)
 
     /* Save devId */
     char devid_key[32];
-    snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.uuid);
+    snprintf(devid_key, sizeof devid_key, "%s.devid", client->config.storage_namespace);
     local_storage_set((const char*)devid_key,
                       (const uint8_t*)client->activate.devid,
                       strlen(client->activate.devid));
@@ -427,6 +427,11 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
     TY_LOGD("uuid:%s", client->config.uuid);
     TY_LOGD("authkey:%s", client->config.authkey);
 
+    /* Default storage namespace */
+    if (client->config.storage_namespace == NULL) {
+        client->config.storage_namespace = client->config.uuid;
+    }
+
     /* cJSON init */
     cJSON_Hooks hooks = {
         .malloc_fn = system_malloc,
@@ -439,7 +444,7 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
 
     /* Try to read the local activation data.
     * If the reading is successful, the device has been activated. */
-    if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
+    if (activated_data_read(client->config.storage_namespace, &client->activate) == OPRT_OK) {
         client->is_activated = true;
         tuya_endpoint_update();
     }
@@ -554,6 +559,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
         /* set binding.region, binding.regist_key to tuya dns server */
         tuya_endpoint_region_regist_set(client->binding->region, client->binding->regist_key);
+        tuya_endpoint_update();
         break;
 
     case STATE_ACTIVATING:
@@ -567,9 +573,8 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         client->binding = NULL;
 
         /* Read and parse activate data */
-        if (activated_data_read(client->config.uuid, &client->activate) == OPRT_OK) {
+        if (activated_data_read(client->config.storage_namespace, &client->activate) == OPRT_OK) {
             client->is_activated = true;
-            tuya_endpoint_update();
         }
 
         /* Retry to load activate */
@@ -657,7 +662,7 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
 
     /* Clean client local data */
     local_storage_del((const char*)(client->activate.schemaId));
-    local_storage_del((const char*)(client->config.uuid));
+    local_storage_del((const char*)(client->config.storage_namespace));
     tuya_endpoint_remove();
     client->is_activated = false;
     TY_LOGI("Activated data remove successed");
@@ -746,7 +751,7 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
         0, PV_VERSION, BS_VERSION, client->config.software_ver);
 
     version_len += sprintf(version_buffer + version_len, "]");
-    TY_LOGW("%s", version_buffer);
+    TY_LOGD("%s", version_buffer);
 
     /* local storage read buffer*/
     size_t readlen = prealloc_size;
@@ -759,7 +764,7 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client)
 
     /* Try read activate config data */
     char version_key[32];
-    snprintf(version_key, sizeof version_key, "%s.ver", client->config.uuid);
+    snprintf(version_key, sizeof version_key, "%s.ver", client->config.storage_namespace);
     rt = local_storage_get((const char*)version_key, (uint8_t*)readbuf, &readlen);
     if (OPRT_OK != rt) {
         TY_LOGW("version save info not found:%d", rt);
