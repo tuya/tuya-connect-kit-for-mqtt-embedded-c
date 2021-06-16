@@ -19,14 +19,14 @@ extern "C" {
 
 /**
  * @brief SDK Version info
- * 
+ *
  */
 #define BS_VERSION "40.07"
 #define PV_VERSION "2.2"
 
 /**
  * @brief Fields length
- * 
+ *
  */
 #define MAX_LENGTH_PRODUCT_ID  16
 #define MAX_LENGTH_UUID        25
@@ -116,6 +116,7 @@ typedef struct {
     const char* software_ver;
     const char* modules;
     const char* skill_param;
+    const char* storage_namespace;
     event_handle_cb_t event_handler;
 } tuya_iot_config_t;
 
@@ -151,7 +152,7 @@ struct tuya_iot_client_handle {
 
 /**
  * @brief Initialize the Tuya client implementation
- * 
+ *
  * @param client - The context to initialize.
  * @param config - defines the properties of the Tuya connection.
  * @return int - OPRT_OK successful or error code.
@@ -159,16 +160,16 @@ struct tuya_iot_client_handle {
 int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config);
 
 /**
- * @brief Start Tuya client cloud service. 
- * 
+ * @brief Start Tuya client cloud service.
+ *
  * @param client - The Tuya client context.
  * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_start(tuya_iot_client_t *client);
 
 /**
- * @brief Stop Tuya client cloud service. 
- * 
+ * @brief Stop Tuya client cloud service.
+ *
  * @param client - The Tuya client context.
  * @return int - OPRT_OK successful or error code.
  */
@@ -176,7 +177,7 @@ int tuya_iot_stop(tuya_iot_client_t *client);
 
 /**
  * @brief Reset the Tuya client.
- * 
+ *
  * @param client - The Tuya client context.
  * @return int - OPRT_OK successful or error code.
  */
@@ -184,7 +185,7 @@ int tuya_iot_reset(tuya_iot_client_t *client);
 
 /**
  * @brief Destroy the Tuya client and release resources.
- * 
+ *
  * @param client - The Tuya client context.
  * @return int - OPRT_OK successful or error code.
  */
@@ -192,33 +193,33 @@ int tuya_iot_destroy(tuya_iot_client_t* client);
 
 /**
  * @brief Loop called to yield the current thread to the underlying Tuya client.
- * 
+ *
  * @param client - The Tuya client context.
- * @return int - OPRT_OK successful or error code. 
+ * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_yield(tuya_iot_client_t* client);
 
 /**
  * @brief Report Tuya data point(DP) services to the cloud.
- * 
+ *
  * @param client - The Tuya client context.
  * @param dps - DP JSON format e.g: "{"101":true}"
- * @return int - OPRT_OK successful or error code. 
+ * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps);
 
 /**
  * @brief Report Tuya data point(DP) services to the cloud,with time.
- * 
+ *
  * @param client - The Tuya client context.
  * @param dps - DP JSON format e.g: "{"101":true}"
  * @param time - time e.g: "{"101":1612324744}"
- * @return int - OPRT_OK successful or error code. 
+ * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps, const char* time);
 /**
  * @brief Is Tuya client has been activated?
- * 
+ *
  * @param client - The Tuya client context.
  * @return true activated
  * @return false inactivated.
@@ -227,35 +228,35 @@ bool tuya_iot_activated(tuya_iot_client_t* client);
 
 /**
  * @brief Remove Tuya client activated data
- * 
+ *
  * @param client - The Tuya client context.
- * @return int - OPRT_OK successful or error code. 
+ * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_activated_data_remove(tuya_iot_client_t* client);
 
 /**
  * @brief Set up a customized get token interface.
- * 
+ *
  * @param client - The Tuya client context.
  * @param token_get_func - token get func
- * @return int - OPRT_OK successful or error code. 
+ * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_token_get_port_register(tuya_iot_client_t* client, tuya_activate_token_get_t token_get_func);
 
 /**
  * @brief Synchronously update the client software version information.
- * 
+ *
  * @param client - The Tuya client context.
- * @return int - OPRT_OK successful or error code. 
+ * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_version_update_sync(tuya_iot_client_t* client);
 
 /**
  * @brief Synchronously update the client extension modules version information.
- * 
+ *
  * @param client - The Tuya client context.
  * @param version - New extension modules verison.
- * @return int - OPRT_OK successful or error code. 
+ * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_extension_modules_version_update(tuya_iot_client_t* client, const char* version);
 
