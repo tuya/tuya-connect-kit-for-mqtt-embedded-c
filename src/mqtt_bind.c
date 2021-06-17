@@ -109,8 +109,8 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* bi
             ret = mqtt_bind_mode_start(&mqctx, config);
             if (OPRT_OK == ret) {
                 /* register token callback */
-                tuya_mqtt_protocol_register(&mqctx, PRO_MQ_ACTIVE_TOKEN_ON, 
-                                mqtt_bind_activate_token_on, binding);
+                tuya_mqtt_protocol_register(&mqctx, PRO_MQ_ACTIVE_TOKEN_ON,
+                                        mqtt_bind_activate_token_on, binding);
                 mqtt_bind_state = STATE_MQTT_BIND_CONNECTED_WAIT;
             }
             break;
@@ -122,25 +122,28 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* bi
                 mqtt_bind_state = STATE_MQTT_BIND_TOKEN_WAIT;
             }
             break;
-        
+
         case STATE_MQTT_BIND_TOKEN_WAIT:
+            TY_LOGD("STATE_MQTT_BIND_TOKEN_WAIT");
+            tuya_mqtt_loop(&mqctx);
             if (strlen(binding->token) == 0) {
                 break;
             }
             mqtt_bind_state = STATE_MQTT_BIND_COMPLETE;
+            break;
 
         case STATE_MQTT_BIND_COMPLETE:
+            TY_LOGD("STATE_MQTT_BIND_COMPLETE");
             tuya_mqtt_stop(&mqctx);
             tuya_mqtt_destory(&mqctx);
             mqtt_bind_state = STATE_MQTT_BIND_EXIT;
             break;
-        
+
         default:
             TY_LOGE("state error:%d", mqtt_bind_state);
             break;
         }
 
-        tuya_mqtt_loop(&mqctx);
     }
 
     return ret;

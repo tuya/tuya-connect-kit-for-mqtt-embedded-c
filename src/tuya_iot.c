@@ -547,6 +547,10 @@ int tuya_iot_yield(tuya_iot_client_t* client)
             TY_LOGI("region: %s", client->binding->region);
             TY_LOGI("regist_key: %s", client->binding->regist_key);
 
+            /* set binding.region, binding.regist_key to tuya dns server */
+            tuya_endpoint_region_regist_set(client->binding->region, client->binding->regist_key);
+            tuya_endpoint_update();
+
             /* DP event send */
             client->event.id = TUYA_EVENT_BIND_TOKEN_ON;
             client->event.type = TUYA_DATE_TYPE_STRING;
@@ -556,10 +560,6 @@ int tuya_iot_yield(tuya_iot_client_t* client)
             /* Take token go to activate */
             client->nextstate = STATE_ACTIVATING;
         }
-
-        /* set binding.region, binding.regist_key to tuya dns server */
-        tuya_endpoint_region_regist_set(client->binding->region, client->binding->regist_key);
-        tuya_endpoint_update();
         break;
 
     case STATE_ACTIVATING:
