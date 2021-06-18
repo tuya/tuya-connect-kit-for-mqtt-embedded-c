@@ -446,7 +446,6 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
     * If the reading is successful, the device has been activated. */
     if (activated_data_read(client->config.storage_namespace, &client->activate) == OPRT_OK) {
         client->is_activated = true;
-        tuya_endpoint_update();
     }
 
     client->state = STATE_IDLE;
@@ -517,6 +516,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         /* Try to read the local activation data.
          * If the reading is successful, the device has been activated. */
         if (client->is_activated) {
+            tuya_endpoint_update();
             client->nextstate = STATE_STARTUP_UPDATE;
             break;
         }
@@ -578,7 +578,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         }
 
         /* Retry to load activate */
-        client->nextstate = STATE_DATA_LOAD;
+        client->nextstate = STATE_STARTUP_UPDATE;
 
         /* DP event send */
         client->event.id = TUYA_EVENT_ACTIVATE_SUCCESSED;
