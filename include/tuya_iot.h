@@ -35,6 +35,7 @@ extern "C" {
 #define MAX_LENGTH_SECKEY      16
 #define MAX_LENGTH_LOCALKEY    16
 #define MAX_LENGTH_SCHEMA_ID   16
+#define MAX_LENGTH_TIMEZONE    6
 #define MAX_LENGTH_SW_VER      10   // max string length of VERSION
 #define MAX_LENGTH_TOKEN       8    // max string length of TOKEN
 
@@ -125,6 +126,7 @@ typedef struct {
     char seckey[MAX_LENGTH_SECKEY + 1];
     char localkey[MAX_LENGTH_LOCALKEY + 1];
     char schemaId[MAX_LENGTH_SCHEMA_ID + 1];
+    char timezone[MAX_LENGTH_TIMEZONE + 1];
     bool resetFactory;
     int capability;
 } tuya_activated_data_t;
@@ -259,6 +261,38 @@ int tuya_iot_version_update_sync(tuya_iot_client_t* client);
  * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_extension_modules_version_update(tuya_iot_client_t* client, const char* version);
+
+/**
+ * @brief Get the client device ID.
+ *
+ * @param client - The Tuya client context.
+ * @return const char* - client device ID string.
+ */
+const char* tuya_iot_devid_get(tuya_iot_client_t* client);
+
+/**
+ * @brief Get the client localkey.
+ *
+ * @param client - The Tuya client context.
+ * @return const char* - client localkey string.
+ */
+const char* tuya_iot_localkey_get(tuya_iot_client_t* client);
+
+/**
+ * @brief Get the client seckey.
+ *
+ * @param client - The Tuya client context.
+ * @return const char* - client seckey string.
+ */
+const char* tuya_iot_seckey_get(tuya_iot_client_t* client);
+
+/**
+ * @brief Get the client timezone.
+ *
+ * @param client - The Tuya client context.
+ * @return const char* - client timezone string.
+ */
+const char* tuya_iot_timezone_get(tuya_iot_client_t* client);
 
 #ifdef __cplusplus
 }

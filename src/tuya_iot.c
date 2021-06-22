@@ -62,7 +62,8 @@ static int activate_json_string_parse(const char* str, tuya_activated_data_t* ou
     if (cJSON_GetObjectItem(root, "devId") == NULL || \
         cJSON_GetObjectItem(root, "secKey") == NULL || \
         cJSON_GetObjectItem(root, "localKey") == NULL || \
-        cJSON_GetObjectItem(root, "schemaId") == NULL) {
+        cJSON_GetObjectItem(root, "schemaId") == NULL || \
+        cJSON_GetObjectItem(root, "stdTimeZone") == NULL) {
         cJSON_Delete(root);
         return OPRT_CJSON_GET_ERR;
     }
@@ -71,6 +72,7 @@ static int activate_json_string_parse(const char* str, tuya_activated_data_t* ou
     strcpy(out->seckey, cJSON_GetObjectItem(root, "secKey")->valuestring);
     strcpy(out->localkey, cJSON_GetObjectItem(root, "localKey")->valuestring);
     strcpy(out->schemaId, cJSON_GetObjectItem(root, "schemaId")->valuestring);
+    strcpy(out->timezone, cJSON_GetObjectItem(root, "stdTimeZone")->valuestring);
     cJSON_Delete(root);
     return OPRT_OK;
 }
@@ -798,4 +800,24 @@ int tuya_iot_extension_modules_version_update(tuya_iot_client_t* client, const c
 {
     client->config.modules = version;
     return tuya_iot_version_update_sync(client);
+}
+
+const char* tuya_iot_devid_get(tuya_iot_client_t* client)
+{
+    return (const char*)(client->activate.devid);
+}
+
+const char* tuya_iot_localkey_get(tuya_iot_client_t* client)
+{
+    return (const char*)(client->activate.localkey);
+}
+
+const char* tuya_iot_seckey_get(tuya_iot_client_t* client)
+{
+    return (const char*)(client->activate.seckey);
+}
+
+const char* tuya_iot_timezone_get(tuya_iot_client_t* client)
+{
+    return (const char*)(client->activate.timezone);
 }
