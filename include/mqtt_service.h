@@ -8,6 +8,7 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "cJSON.h"
 
 /**
  * @brief The network buffer must remain valid for the lifetime of the MQTT context.
@@ -72,7 +73,6 @@ extern "C" {
 #define PRO_DEV_ALARM_DOWN    		701 /* cloud -> dev */
 #define PRO_DEV_ALARM_UP      		702 /* dev -> cloud */
 
-#define MQTT_EVENT_ID_MAX           6
 
 typedef enum {
     TUYA_MQTT_EVENT_ERROR = 0,       /*!< This event occurs when there are any errors during execution */
@@ -110,27 +110,26 @@ typedef struct {
 } tuya_mqtt_access_t;
 
 typedef struct {
-    void* data;
-    void* user_data;
     uint16_t event_id;
-    uint16_t data_len;
+    cJSON*   data;
+    void*    user_data;
 } tuya_mqtt_event_t;
 
 typedef void (*tuya_mqtt_protocol_cb_t)(tuya_mqtt_event_t* ev);
 
-typedef struct {
+typedef struct pv22_protocol_handle {
+    struct pv22_protocol_handle* next;
     uint16_t id;
     tuya_mqtt_protocol_cb_t cb;
     void* user_data;
-} mqtt_protocol_handle_t;
+} tuya_protocol_handle_t;
 
 typedef struct {
     void* mqttctx;
     tuya_mqtt_access_t signature;
-    mqtt_protocol_handle_t protocol_handle[MQTT_EVENT_ID_MAX];
+    tuya_protocol_handle_t* protocol_list;
     uint32_t sequence_in;
     uint32_t sequence_out;
-    uint8_t handle_num;
     void* user_data;
     bool manual_disconnect;
     bool is_inited;
@@ -151,6 +150,8 @@ int tuya_mqtt_destory(tuya_mqtt_context_t* context);
 bool tuya_mqtt_connected(tuya_mqtt_context_t* context);
 
 int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb, void* user_data);
+
+int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb);
 
 int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length);
 

@@ -343,11 +343,12 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
     int rt = OPRT_OK;
 
     /* mqtt init */
+    const tuya_endpoint_t* endpoint = tuya_endpoint_get();
     rt = tuya_mqtt_init(&client->mqctx, &(const tuya_mqtt_config_t){
-        .cacert = tuya_endpoint_get()->mqtt.cert,
-        .cacert_len = tuya_endpoint_get()->mqtt.cert_len,
-        .host = tuya_endpoint_get()->mqtt.host,
-        .port = tuya_endpoint_get()->mqtt.port,
+        .cacert = endpoint->mqtt.cert,
+        .cacert_len = endpoint->mqtt.cert_len,
+        .host = endpoint->mqtt.host,
+        .port = endpoint->mqtt.port,
         .devid = client->activate.devid,
         .seckey = client->activate.seckey,
         .localkey = client->activate.localkey,

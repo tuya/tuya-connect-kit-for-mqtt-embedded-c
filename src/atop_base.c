@@ -377,12 +377,13 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
 
     /* HTTP Request send */
     TY_LOGD("http request send!");
+    const tuya_endpoint_t* endpoint = tuya_endpoint_get();
     http_status = http_client_request(
         &(const http_client_request_t){
-            .cacert = tuya_endpoint_get()->atop.cert,
-            .cacert_len = tuya_endpoint_get()->atop.cert_len,
-            .host = tuya_endpoint_get()->atop.host,
-            .port = tuya_endpoint_get()->atop.port,
+            .cacert = endpoint->atop.cert,
+            .cacert_len = endpoint->atop.cert_len,
+            .host = endpoint->atop.host,
+            .port = endpoint->atop.port,
             .method = "POST",
             .path = path_buffer,
             .headers = headers,
