@@ -90,7 +90,6 @@ static int pv22_packet_encode(const uint8_t* key, const pv22_packet_object_t* in
 	// data
 	size_t encrypt_len = 0;
 	uint8_t* encrypt_data;
-	// rt = aes128_ecb_encode((const uint8_t*)input->data, input->datalen, (uint8_t*)(output + PV22_FIXED_HEADER_LENGTH), (uint32_t*)&encrypt_len, key);
 	rt = aes128_ecb_encode((const uint8_t*)input->data, input->datalen, &encrypt_data, (uint32_t*)&encrypt_len, key);
 	if (OPRT_OK != rt) {
 		TY_LOGE("encrypt fail:%d", rt);
@@ -156,7 +155,6 @@ static int pv22_packet_decode(const uint8_t* key, const uint8_t* input, size_t i
 	// decrypt buffer
 	uint8_t* decrypt_data;
 	size_t decrypt_len = 0;
-	// int rt = aes128_ecb_decode((const uint8_t*)data, data_len, &output->data, (uint32_t*)&output->datalen, key);
 	int rt = aes128_ecb_decode((const uint8_t*)data, data_len, &decrypt_data, (uint32_t*)&decrypt_len, key);
 	if (OPRT_OK != rt) {
 		TY_LOGE("mqtt data decrypt fail:%d", rt);
@@ -418,12 +416,12 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 	}
 
 	packet->datalen = sprintf((char*)packet->data, MQTT_REPORT_FMT, protocol_id, system_timestamp(), (char*)data);
-	TY_LOGD("Report data:%s", (char*)packet->data);
-
 	packet->sequence = context->sequence_out++;
 	packet->source = 1;
+	TY_LOGD("Report data:%s", (char*)packet->data);
 
-	ret = pv22_packet_encode((const uint8_t*)context->signature.cipherkey, (const pv22_packet_object_t*)packet, buffer, &buffer_len);
+	ret = pv22_packet_encode((const uint8_t*)context->signature.cipherkey, 
+							 (const pv22_packet_object_t*)packet, buffer, &buffer_len);
 	system_free(packet);
 	if (ret != OPRT_OK) {
 		TY_LOGE("pv22_packet_encode error:%d", ret);
@@ -494,10 +492,8 @@ int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel,
         return OPRT_MALLOC_FAILED;
     }
 
-    INT_T offset = 0;
-    offset = sprintf((char*)data_buf,"{\"progress\":\"%d\",\"firmwareType\":%d}", percent, channel);
-
-	uint16_t msgid = tuya_mqtt_report_data(context, PRO_UPGE_PUSH, data_buf, offset);
+    int buffer_size = sprintf((char*)data_buf,"{\"progress\":\"%d\",\"firmwareType\":%d}", percent, channel);
+	uint16_t msgid = tuya_mqtt_report_data(context, PRO_UPGE_PUSH, data_buf, (uint16_t)buffer_size);
     system_free(data_buf);
 	if (msgid <= 0) {
     	return OPRT_COM_ERROR;

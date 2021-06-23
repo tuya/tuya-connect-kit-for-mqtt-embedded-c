@@ -73,11 +73,12 @@ static int mqtt_bind_mode_start(tuya_mqtt_context_t* mqctx, const tuya_iot_confi
     int rt = OPRT_OK;
 
     /* mqtt init */
+    const tuya_endpoint_t* endpoint = tuya_endpoint_get();
     rt = tuya_mqtt_init(mqctx, &(const tuya_mqtt_config_t){
-        .cacert = tuya_endpoint_get()->mqtt.cert,
-        .cacert_len =  tuya_endpoint_get()->mqtt.cert_len,
-        .host =  tuya_endpoint_get()->mqtt.host,
-        .port = tuya_endpoint_get()->mqtt.port,
+        .cacert = endpoint->mqtt.cert,
+        .cacert_len =  endpoint->mqtt.cert_len,
+        .host =  endpoint->mqtt.host,
+        .port = endpoint->mqtt.port,
         .uuid = config->uuid,
         .authkey = config->authkey,
         .timeout = MQTT_BIND_NET_TIMEOUT,
