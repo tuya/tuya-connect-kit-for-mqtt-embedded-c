@@ -32,7 +32,7 @@
 typedef struct {
 	uint32_t sequence;
 	uint32_t source;
-	size_t   datalen; 
+	size_t   datalen;
 	uint8_t  data[0];
 } pv22_packet_object_t;
 
@@ -124,7 +124,7 @@ static int pv22_packet_decode(const uint8_t* key, const uint8_t* input, size_t i
 	/* package length check */
 	if (ilen < PV22_FIXED_HEADER_LENGTH) {
 		TY_LOGE("len too short");
-		return;
+		return OPRT_INVALID_PARM;
 	}
 
 	/* unpack tuya protocol 2.2 */
@@ -162,21 +162,20 @@ static int pv22_packet_decode(const uint8_t* key, const uint8_t* input, size_t i
 	memcpy(output->data, decrypt_data, decrypt_len);
 	output->datalen = decrypt_len;
 	system_free(decrypt_data);
-	
+
 	return OPRT_OK;
 }
 
 static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* payload, size_t payload_len)
 {
 	int ret = OPRT_OK;
-	int i;
 
 	pv22_packet_object_t* packet = system_malloc(payload_len);
 	if (!packet) {
 		TY_LOGE("packet malloc fail.");
 		return OPRT_MALLOC_FAILED;
 	}
-	
+
 	ret = pv22_packet_decode((const uint8_t*)context->signature.cipherkey, payload, payload_len, packet);
 	if (ret != OPRT_OK) {
 		TY_LOGE("packet decode fail.");
@@ -184,7 +183,7 @@ static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* paylo
 		return OPRT_COM_ERROR;
 	}
 	TY_LOGV("Data JSON:%.*s", packet->datalen, packet->data);
-	
+
 	/* json parse */
 	cJSON *root = NULL;
     cJSON *json = NULL;
@@ -217,7 +216,7 @@ static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* paylo
 	tuya_mqtt_event_t event;
 	event.event_id = protocol_id;
 	event.data = cJSON_GetObjectItem(root, "data");
-	
+
 	tuya_protocol_handle_t* target = context->protocol_list;
 	for (; target; target = target->next) {
 		if (target->id == protocol_id) {
@@ -452,7 +451,7 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 	packet->source = 1;
 	TY_LOGD("Report data:%s", (char*)packet->data);
 
-	ret = pv22_packet_encode((const uint8_t*)context->signature.cipherkey, 
+	ret = pv22_packet_encode((const uint8_t*)context->signature.cipherkey,
 							 (const pv22_packet_object_t*)packet, buffer, &buffer_len);
 	system_free(packet);
 	if (ret != OPRT_OK) {
