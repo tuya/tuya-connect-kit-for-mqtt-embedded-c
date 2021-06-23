@@ -125,7 +125,6 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* bi
             break;
 
         case STATE_MQTT_BIND_TOKEN_WAIT:
-            TY_LOGD("STATE_MQTT_BIND_TOKEN_WAIT");
             tuya_mqtt_loop(&mqctx);
             if (strlen(binding->token) == 0) {
                 break;

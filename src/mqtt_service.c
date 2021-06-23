@@ -145,12 +145,11 @@ static int pv22_packet_decode(const uint8_t* key, const uint8_t* input, size_t i
 #endif
 	output->sequence = sequence;
 	output->source = source;
-	TY_LOGD("crc32:%08x, sequence:%d, source:%d", crc32, sequence, source);
 
 	/* get encrypt data */
 	uint8_t* data = (uint8_t*)input + PV22_FIXED_HEADER_LENGTH;
 	size_t data_len = (size_t)(ilen - PV22_FIXED_HEADER_LENGTH);
-	TY_LOGD("data len:%d", (int)data_len);
+	TY_LOGD("crc32:%08x, sequence:%d, source:%d, datalen:%d", crc32, sequence, source, (int)data_len);
 
 	// decrypt buffer
 	uint8_t* decrypt_data;
@@ -184,8 +183,9 @@ static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* paylo
 		system_free(packet);
 		return OPRT_COM_ERROR;
 	}
+	TY_LOGV("Data JSON:%.*s", packet->datalen, packet->data);
 	
-	// json parse
+	/* json parse */
 	cJSON *root = NULL;
     cJSON *json = NULL;
     root = cJSON_Parse((const char *)packet->data);
@@ -204,7 +204,7 @@ static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* paylo
 		return OPRT_CJSON_GET_ERR;
     }
 
-    // protocol
+    /* protocol ID */
     int protocol_id = cJSON_GetObjectItem(root,"protocol")->valueint;
     json = cJSON_GetObjectItem(root,"data");
     if(NULL == json) {
@@ -213,17 +213,16 @@ static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* paylo
         return OPRT_CJSON_GET_ERR;
     }
 
-    // dispatch
-	for (i = 0; i < context->handle_num; i++) {
-		if (context->protocol_handle[i].id == protocol_id) {
-			tuya_mqtt_event_t event = {
-				.event_id = protocol_id,
-				.data = cJSON_GetObjectItem(root, "data"),
-				.data_len = 0,
-				.user_data = context->protocol_handle[i].user_data,
-			};
-			context->protocol_handle[i].cb(&event);
-			break;
+    /* dispatch */
+	tuya_mqtt_event_t event;
+	event.event_id = protocol_id;
+	event.data = cJSON_GetObjectItem(root, "data");
+	
+	tuya_protocol_handle_t* target = context->protocol_list;
+	for (; target; target = target->next) {
+		if (target->id == protocol_id) {
+			event.user_data = target->user_data,
+			target->cb(&event);
 		}
 	}
 
@@ -372,20 +371,53 @@ int tuya_mqtt_stop(tuya_mqtt_context_t* context)
 
 int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb, void* user_data)
 {
-	if (context == NULL || context->is_inited == false) {
+	if (context == NULL || context->is_inited == false || cb == NULL) {
 		return OPRT_INVALID_PARM;
 	}
 
-	int i = 0;
-    for (; i < context->handle_num; i++) {
-		if (context->protocol_handle[i].id == protocol_id) {
-			break;
+	/* LOCK */
+	/* Repetition filter */
+	tuya_protocol_handle_t* target = context->protocol_list;
+	while (target) {
+		if (target->id == protocol_id && target->cb == cb) {
+			return OPRT_COM_ERROR;
+		}
+		target = target->next;
+	}
+
+	tuya_protocol_handle_t* new_handle = system_calloc(1, sizeof(tuya_protocol_handle_t));
+	if (!new_handle) {
+		return OPRT_MALLOC_FAILED;
+	}
+	new_handle->id = protocol_id;
+	new_handle->cb = cb;
+	new_handle->user_data = user_data;
+	new_handle->next = context->protocol_list;
+	context->protocol_list = new_handle;
+	/* UNLOCK */
+
+	return OPRT_OK;
+}
+
+int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb)
+{
+	if (context == NULL || context->is_inited == false || cb == NULL) {
+		return OPRT_INVALID_PARM;
+	}
+
+	/* LOCK */
+	tuya_protocol_handle_t** target = &context->protocol_list;
+	while (*target) {
+		tuya_protocol_handle_t* entry = *target;
+		if (entry->id == protocol_id && entry->cb == cb) {
+			*target = entry->next;
+			system_free(entry);
+		} else {
+			target = &entry->next;
 		}
 	}
-	context->protocol_handle[i].id = protocol_id;
-	context->protocol_handle[i].cb = cb;
-	context->protocol_handle[i].user_data = user_data;
-	context->handle_num = i + 1;
+	/* UNLOCK */
+
 	return OPRT_OK;
 }
 
