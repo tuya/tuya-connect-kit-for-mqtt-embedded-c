@@ -16,16 +16,25 @@
 #include "mqtt_service.h"
 
 // mqtt message package
-#define TUYA_MQTT_VER_LEN 3
-#define TUYA_MQTT_CRC32_LEN 4
-#define TUYA_MQTT_SEQUENCE_LEN 4
-#define TUYA_MQTT_SOURCE_LEN 4
-#define TUYA_MQTT_CRC32_OFFSET (0 + TUYA_MQTT_VER_LEN)
-#define TUYA_MQTT_SEQUENCE_OFFSET (TUYA_MQTT_CRC32_OFFSET + TUYA_MQTT_CRC32_LEN)
-#define TUYA_MQTT_SOURCE_OFFSET (TUYA_MQTT_SEQUENCE_OFFSET + TUYA_MQTT_SEQUENCE_LEN)
-#define TUYA_MQTT_DATA_OFFSET (TUYA_MQTT_SOURCE_OFFSET + TUYA_MQTT_SOURCE_LEN)
+#define PV22_VER_LENGTH 3
+#define PV22_CRC32_LENGTH 4
+#define PV22_SEQUENCE_LENGTH 4
+#define PV22_SOURCE_LENGTH 4
+
+#define PV22_CRC32_OFFSET (0 + PV22_VER_LENGTH)
+#define PV22_SEQUENCE_OFFSET (PV22_CRC32_OFFSET + PV22_CRC32_LENGTH)
+#define PV22_SOURCE_OFFSET (PV22_SEQUENCE_OFFSET + PV22_SEQUENCE_LENGTH)
+#define PV22_FIXED_HEADER_LENGTH (15)
+
 #define MQTT_REPORT_FMT "{\"protocol\":%d,\"t\":%d,\"data\":%s}"
 #define MQTT_FMT_MAX (64)
+
+typedef struct {
+	uint32_t sequence;
+	uint32_t source;
+	size_t   datalen; 
+	uint8_t  data[0];
+} pv22_packet_object_t;
 
 static int tuya_mqtt_signature_tool(const tuya_meta_info_t *input, tuya_mqtt_access_t *signout)
 {
@@ -74,67 +83,116 @@ static int tuya_mqtt_signature_tool(const tuya_meta_info_t *input, tuya_mqtt_acc
     return OPRT_OK;
 }
 
-/*-----------------------------------------------------------*/
-
-static void mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* payload, size_t payload_len)
+static int pv22_packet_encode(const uint8_t* key, const pv22_packet_object_t* input, uint8_t* output, size_t* olen)
 {
 	int rt = OPRT_OK;
-	int i;
 
+	// data
+	size_t encrypt_len = 0;
+	uint8_t* encrypt_data;
+	rt = aes128_ecb_encode((const uint8_t*)input->data, input->datalen, &encrypt_data, (uint32_t*)&encrypt_len, key);
+	if (OPRT_OK != rt) {
+		TY_LOGE("encrypt fail:%d", rt);
+		return OPRT_COM_ERROR;
+	}
+	memcpy(output + PV22_FIXED_HEADER_LENGTH, encrypt_data, encrypt_len);
+	system_free(encrypt_data);
+
+	// verison
+	memcpy(output, "2.2", PV22_VER_LENGTH);
+
+	// squence
+	uint32_t sequence_out = input->sequence;
+#if BYTE_ORDER == LITTLE_ENDIAN
+	sequence_out = DWORD_SWAP(sequence_out);
+#endif
+	memcpy(output + PV22_SEQUENCE_OFFSET, &sequence_out, PV22_SEQUENCE_LENGTH);
+	memcpy(output + PV22_SOURCE_OFFSET, &input->source, PV22_SOURCE_LENGTH);
+
+	// crc32 calculate
+	uint32_t crc32_value = crc_32(output + PV22_SEQUENCE_OFFSET, PV22_SEQUENCE_LENGTH + PV22_SOURCE_LENGTH + encrypt_len);
+#if BYTE_ORDER == LITTLE_ENDIAN
+	crc32_value = DWORD_SWAP(crc32_value);
+#endif
+	memcpy(output + PV22_CRC32_OFFSET, &crc32_value, PV22_CRC32_LENGTH);
+	*olen = PV22_FIXED_HEADER_LENGTH + encrypt_len;
+	return OPRT_OK;
+}
+
+static int pv22_packet_decode(const uint8_t* key, const uint8_t* input, size_t ilen, pv22_packet_object_t* output)
+{
 	/* package length check */
-	if (payload_len < TUYA_MQTT_DATA_OFFSET) {
+	if (ilen < PV22_FIXED_HEADER_LENGTH) {
 		TY_LOGE("len too short");
 		return;
 	}
 
 	/* unpack tuya protocol 2.2 */
 	/* verison filter */
-	char ver[4] = {0};
-	memcpy(ver, payload, TUYA_MQTT_VER_LEN);
-	if (strcmp(ver, "2.2") != 0) {
-		TY_LOGE("verison error:%s", ver);
-		return;
+	if (memcmp(input, "2.2", PV22_VER_LENGTH) != 0) {
+		TY_LOGE("verison error:%.*s", PV22_VER_LENGTH, input);
+		return OPRT_COM_ERROR;
 	}
 
 	uint32_t crc32, sequence, source;
-	memcpy(&crc32, payload + TUYA_MQTT_CRC32_OFFSET, TUYA_MQTT_CRC32_LEN);
-	memcpy(&sequence, payload + TUYA_MQTT_SEQUENCE_OFFSET, TUYA_MQTT_SEQUENCE_LEN);
-	memcpy(&source, payload + TUYA_MQTT_SOURCE_OFFSET, TUYA_MQTT_SOURCE_LEN);
+	memcpy(&crc32, input + PV22_CRC32_OFFSET, PV22_CRC32_LENGTH);
+	memcpy(&sequence, input + PV22_SEQUENCE_OFFSET, PV22_SEQUENCE_LENGTH);
+	memcpy(&source, input + PV22_SOURCE_OFFSET, PV22_SOURCE_LENGTH);
+
 #if BYTE_ORDER == LITTLE_ENDIAN
 	sequence = DWORD_SWAP(sequence);
 	source = DWORD_SWAP(source);
 #endif
-	TY_LOGD("version:%s, crc32:%08x, sequence:%d, source:%d", ver, crc32, sequence, source);
+	output->sequence = sequence;
+	output->source = source;
 
 	/* get encrypt data */
-	uint8_t* data = (uint8_t*)payload + TUYA_MQTT_DATA_OFFSET;
-	size_t data_len = (size_t)(payload_len - TUYA_MQTT_DATA_OFFSET);
-	TY_LOGD("data len:%d", (int)data_len);
+	uint8_t* data = (uint8_t*)input + PV22_FIXED_HEADER_LENGTH;
+	size_t data_len = (size_t)(ilen - PV22_FIXED_HEADER_LENGTH);
+	TY_LOGD("crc32:%08x, sequence:%d, source:%d, datalen:%d", crc32, sequence, source, (int)data_len);
 
 	// decrypt buffer
-	uint8_t* jsonstr = NULL;
-	size_t jsonstr_len = 0;
-
-	char* cipherkey = context->signature.cipherkey;
-	TY_LOGV("cipherkey:%s", cipherkey);
-	rt = aes128_ecb_decode((const uint8_t*)data, data_len, &jsonstr, (uint32_t*)&jsonstr_len, (const uint8_t*)cipherkey);
+	uint8_t* decrypt_data;
+	size_t decrypt_len = 0;
+	int rt = aes128_ecb_decode((const uint8_t*)data, data_len, &decrypt_data, (uint32_t*)&decrypt_len, key);
 	if (OPRT_OK != rt) {
 		TY_LOGE("mqtt data decrypt fail:%d", rt);
-		system_free(jsonstr);
-		return;
+		return OPRT_COM_ERROR;
 	}
-	jsonstr[jsonstr_len] = '\0';
-	TY_LOGD("MQTT recv len:%d, output:%s", (int)jsonstr_len, jsonstr);
+	memcpy(output->data, decrypt_data, decrypt_len);
+	output->datalen = decrypt_len;
+	system_free(decrypt_data);
+	
+	return OPRT_OK;
+}
 
-	// json parse
+static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* payload, size_t payload_len)
+{
+	int ret = OPRT_OK;
+	int i;
+
+	pv22_packet_object_t* packet = system_malloc(payload_len);
+	if (!packet) {
+		TY_LOGE("packet malloc fail.");
+		return OPRT_MALLOC_FAILED;
+	}
+	
+	ret = pv22_packet_decode((const uint8_t*)context->signature.cipherkey, payload, payload_len, packet);
+	if (ret != OPRT_OK) {
+		TY_LOGE("packet decode fail.");
+		system_free(packet);
+		return OPRT_COM_ERROR;
+	}
+	TY_LOGV("Data JSON:%.*s", packet->datalen, packet->data);
+	
+	/* json parse */
 	cJSON *root = NULL;
     cJSON *json = NULL;
-    root = cJSON_Parse((const char *)jsonstr);
-	system_free(jsonstr);
+    root = cJSON_Parse((const char *)packet->data);
+	system_free(packet);
     if(NULL == root) {
         TY_LOGE("JSON parse error");
-		rt = OPRT_CJSON_PARSE_ERR;
-        goto exit;
+		return OPRT_CJSON_PARSE_ERR;
     }
 
 	/* JSON key verfiy */
@@ -142,34 +200,34 @@ static void mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* payl
        ( NULL == cJSON_GetObjectItem(root,"t")) || \
        ( NULL == cJSON_GetObjectItem(root,"data"))) {
         TY_LOGE("param is no correct");
-		rt = OPRT_CJSON_GET_ERR;
-        goto exit;
+		cJSON_Delete(root);
+		return OPRT_CJSON_GET_ERR;
     }
 
-    // protocol
+    /* protocol ID */
     int protocol_id = cJSON_GetObjectItem(root,"protocol")->valueint;
     json = cJSON_GetObjectItem(root,"data");
     if(NULL == json) {
         TY_LOGE("get json err");
-        goto exit;
+		cJSON_Delete(root);
+        return OPRT_CJSON_GET_ERR;
     }
 
-    // dispatch
-	for (i = 0; i < context->handle_num; i++) {
-		if (context->protocol_handle[i].id == protocol_id) {
-			tuya_mqtt_event_t event = {
-				.event_id = protocol_id,
-				.data = cJSON_GetObjectItem(root, "data"),
-				.data_len = 0,
-				.user_data = context->protocol_handle[i].user_data,
-			};
-			context->protocol_handle[i].cb(&event);
-			break;
+    /* dispatch */
+	tuya_mqtt_event_t event;
+	event.event_id = protocol_id;
+	event.data = cJSON_GetObjectItem(root, "data");
+	
+	tuya_protocol_handle_t* target = context->protocol_list;
+	for (; target; target = target->next) {
+		if (target->id == protocol_id) {
+			event.user_data = target->user_data,
+			target->cb(&event);
 		}
 	}
 
-exit:
 	cJSON_Delete(root);
+	return OPRT_OK;
 }
 
 static void mqtt_client_connected_cb(void* client, void* userdata)
@@ -313,20 +371,53 @@ int tuya_mqtt_stop(tuya_mqtt_context_t* context)
 
 int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb, void* user_data)
 {
-	if (context == NULL || context->is_inited == false) {
+	if (context == NULL || context->is_inited == false || cb == NULL) {
 		return OPRT_INVALID_PARM;
 	}
 
-	int i = 0;
-    for (; i < context->handle_num; i++) {
-		if (context->protocol_handle[i].id == protocol_id) {
-			break;
+	/* LOCK */
+	/* Repetition filter */
+	tuya_protocol_handle_t* target = context->protocol_list;
+	while (target) {
+		if (target->id == protocol_id && target->cb == cb) {
+			return OPRT_COM_ERROR;
+		}
+		target = target->next;
+	}
+
+	tuya_protocol_handle_t* new_handle = system_calloc(1, sizeof(tuya_protocol_handle_t));
+	if (!new_handle) {
+		return OPRT_MALLOC_FAILED;
+	}
+	new_handle->id = protocol_id;
+	new_handle->cb = cb;
+	new_handle->user_data = user_data;
+	new_handle->next = context->protocol_list;
+	context->protocol_list = new_handle;
+	/* UNLOCK */
+
+	return OPRT_OK;
+}
+
+int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb)
+{
+	if (context == NULL || context->is_inited == false || cb == NULL) {
+		return OPRT_INVALID_PARM;
+	}
+
+	/* LOCK */
+	tuya_protocol_handle_t** target = &context->protocol_list;
+	while (*target) {
+		tuya_protocol_handle_t* entry = *target;
+		if (entry->id == protocol_id && entry->cb == cb) {
+			*target = entry->next;
+			system_free(entry);
+		} else {
+			target = &entry->next;
 		}
 	}
-	context->protocol_handle[i].id = protocol_id;
-	context->protocol_handle[i].cb = cb;
-	context->protocol_handle[i].user_data = user_data;
-	context->handle_num = i + 1;
+	/* UNLOCK */
+
 	return OPRT_OK;
 }
 
@@ -340,65 +431,35 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 		return OPRT_COM_ERROR;
 	}
 
-	int rt = OPRT_OK;
-	char* json_buffer = (char*)system_malloc(MQTT_FMT_MAX + length + 16);
-	if (NULL == json_buffer) {
-		TY_LOGE("encrypto_buffer malloc fail");
+	int ret = OPRT_OK;
+
+	pv22_packet_object_t* packet = system_malloc(PV22_FIXED_HEADER_LENGTH + MQTT_FMT_MAX + length + 16);
+	if (!packet) {
+		TY_LOGE("packet malloc fail.");
 		return OPRT_MALLOC_FAILED;
 	}
 
-	size_t encrpyt_len = 0;
-	size_t buffer_len;
-	uint8_t* buffer = system_malloc(TUYA_MQTT_DATA_OFFSET + MQTT_FMT_MAX + length + 16);
+	size_t buffer_len = 0;
+	uint8_t* buffer = system_malloc(PV22_FIXED_HEADER_LENGTH + MQTT_FMT_MAX + length + 16);
 	if (NULL == buffer) {
 		TY_LOGE("buffer malloc fail");
-		system_free(json_buffer);
+		system_free(buffer);
 		return OPRT_MALLOC_FAILED;
 	}
 
-	int printlen = sprintf(json_buffer, MQTT_REPORT_FMT, protocol_id, system_timestamp(), (char*)data);
-	TY_LOGD("Report data:%s", json_buffer);
+	packet->datalen = sprintf((char*)packet->data, MQTT_REPORT_FMT, protocol_id, system_timestamp(), (char*)data);
+	packet->sequence = context->sequence_out++;
+	packet->source = 1;
+	TY_LOGD("Report data:%s", (char*)packet->data);
 
-	// data
-	uint8_t* encrypt_buffer = NULL;
-	rt = aes128_ecb_encode((const uint8_t*)json_buffer, printlen,
-		&encrypt_buffer, (uint32_t*)&encrpyt_len, (const uint8_t*)context->signature.cipherkey);
-	system_free(json_buffer);
-	if (OPRT_OK != rt) {
-		TY_LOGE("encrypt fail:%d", rt);
+	ret = pv22_packet_encode((const uint8_t*)context->signature.cipherkey, 
+							 (const pv22_packet_object_t*)packet, buffer, &buffer_len);
+	system_free(packet);
+	if (ret != OPRT_OK) {
+		TY_LOGE("pv22_packet_encode error:%d", ret);
 		system_free(buffer);
 		return OPRT_COM_ERROR;
 	}
-	TY_LOGV("printlen:%d, encryptlen:%d", printlen, (int)encrpyt_len);
-
-	// buffer copy
-	memcpy(buffer + TUYA_MQTT_DATA_OFFSET, encrypt_buffer, encrpyt_len);
-	system_free(encrypt_buffer);
-
-	// verison
-	memcpy(buffer, "2.2", TUYA_MQTT_VER_LEN);
-
-	// squence
-	uint32_t sequence_out = context->sequence_out++;
-	TY_LOGV("sequence out:%d", sequence_out);
-#if BYTE_ORDER == LITTLE_ENDIAN
-	sequence_out = DWORD_SWAP(sequence_out);
-#endif
-	memcpy(buffer + TUYA_MQTT_SEQUENCE_OFFSET, &sequence_out, TUYA_MQTT_SEQUENCE_LEN);
-
-	// source
-	uint8_t source_num[4] = {0x00, 0x00, 0x00, 0x01};
-	memcpy(buffer + TUYA_MQTT_SOURCE_OFFSET, source_num, TUYA_MQTT_SOURCE_LEN);
-
-	// crc32 calculate
-	uint32_t crc32_value = crc_32(buffer + TUYA_MQTT_SEQUENCE_OFFSET,
-		TUYA_MQTT_SEQUENCE_LEN + TUYA_MQTT_SOURCE_LEN + encrpyt_len);
-
-#if BYTE_ORDER == LITTLE_ENDIAN
-	crc32_value = DWORD_SWAP(crc32_value);
-#endif
-	memcpy(buffer + TUYA_MQTT_CRC32_OFFSET, &crc32_value, TUYA_MQTT_CRC32_LEN);
-	buffer_len = TUYA_MQTT_DATA_OFFSET + encrpyt_len;
 
 	// report
 	uint16_t msgid = mqtt_client_publish( context->mqttctx,
@@ -463,10 +524,8 @@ int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel,
         return OPRT_MALLOC_FAILED;
     }
 
-    INT_T offset = 0;
-    offset = sprintf((char*)data_buf,"{\"progress\":\"%d\",\"firmwareType\":%d}", percent, channel);
-
-	uint16_t msgid = tuya_mqtt_report_data(context, PRO_UPGE_PUSH, data_buf, offset);
+    int buffer_size = sprintf((char*)data_buf,"{\"progress\":\"%d\",\"firmwareType\":%d}", percent, channel);
+	uint16_t msgid = tuya_mqtt_report_data(context, PRO_UPGE_PUSH, data_buf, (uint16_t)buffer_size);
     system_free(data_buf);
 	if (msgid <= 0) {
     	return OPRT_COM_ERROR;
