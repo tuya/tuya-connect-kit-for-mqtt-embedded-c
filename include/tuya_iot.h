@@ -42,6 +42,7 @@ extern "C" {
 /* tuya sdk gateway reset type */
 typedef enum {
     TUYA_EVENT_RESET,
+    TUYA_EVENT_RESET_COMPLETE,
     TUYA_EVENT_BIND_START,
     TUYA_EVENT_BIND_TOKEN_ON,
     TUYA_EVENT_ACTIVATE_SUCCESSED,
