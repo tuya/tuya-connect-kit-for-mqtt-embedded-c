@@ -6,19 +6,9 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
 #include "cJSON.h"
-
-/**
- * @brief The network buffer must remain valid for the lifetime of the MQTT context.
- */
-#define TUYA_MQTT_BUFFER_SIZE (1024U)
-
-/**
- * @brief Timeout for receiving CONNACK packet in milli seconds.
- */
-#define CONNACK_RECV_TIMEOUT_MS             ( 5000U )
+#include "mqtt_client_interface.h"
 
 
 // data max len
@@ -124,10 +114,21 @@ typedef struct pv22_protocol_handle {
     void* user_data;
 } tuya_protocol_handle_t;
 
+typedef void(*mqtt_subscribe_message_cb_t)(uint16_t msgid, const mqtt_client_message_t* msg, void* userdata);
+
+typedef struct mqtt_subscribe_handle {
+	struct mqtt_subscribe_handle* next;
+	char* topic;
+    size_t topic_length;
+	mqtt_subscribe_message_cb_t cb;
+	void* userdata;
+} mqtt_subscribe_handle_t;
+
 typedef struct {
     void* mqttctx;
     tuya_mqtt_access_t signature;
     tuya_protocol_handle_t* protocol_list;
+    mqtt_subscribe_handle_t* subscribe_list;
     uint32_t sequence_in;
     uint32_t sequence_out;
     void* user_data;
@@ -152,6 +153,10 @@ bool tuya_mqtt_connected(tuya_mqtt_context_t* context);
 int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb, void* user_data);
 
 int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb);
+
+int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context, const char* topic, mqtt_subscribe_message_cb_t cb, void* userdata);
+
+int tuya_mqtt_subscribe_message_callback_unregister(tuya_mqtt_context_t* context, const char* topic);
 
 int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length);
 
