@@ -669,6 +669,11 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
     tuya_endpoint_remove();
     client->is_activated = false;
     TY_LOGI("Activated data remove successed");
+
+    client->event.id = TUYA_EVENT_RESET_COMPLETE;
+    client->event.type = TUYA_DATE_TYPE_UNDEFINED;
+    iot_dispatch_event(client);
+
     return OPRT_OK;
 }
 
