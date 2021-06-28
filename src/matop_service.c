@@ -50,14 +50,13 @@ static int matop_service_data_receive_cb(void* context, const uint8_t* input, si
 	mqtt_atop_message_t* target_message = matop->message_list;
 	while (target_message) {
 		if (target_message->id == id) {
-			TY_LOGD("target id found!");
 			break;
 		}
 		target_message = target_message->next;
 	}
 
 	if (target_message == NULL) {
-		TY_LOGE("not found id.");
+		TY_LOGW("not found id.");
 		cJSON_Delete(root);
 		return OPRT_COM_ERROR;
 	}
@@ -110,14 +109,13 @@ static int matop_service_file_rawdata_receive_cb(void* context, const uint8_t* i
 	mqtt_atop_message_t* target_message = matop->message_list;
 	while (target_message) {
 		if (target_message->id == id) {
-			TY_LOGV("target id found!");
 			break;
 		}
 		target_message = target_message->next;
 	}
 
 	if (target_message == NULL) {
-		TY_LOGE("not found id.");
+		TY_LOGW("not found id.");
 		return OPRT_COM_ERROR;
 	}
 

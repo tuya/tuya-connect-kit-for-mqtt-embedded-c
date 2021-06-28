@@ -15,6 +15,7 @@
 #include "atop_service.h"
 #include "mqtt_bind.h"
 #include "cJSON.h"
+#include "MultiTimer.h"
 
 #define ACTIVATE_KV_BUFFER         (255)
 
@@ -435,6 +436,9 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
         client->config.storage_namespace = client->config.uuid;
     }
 
+    /* Software timer Init */
+    MultiTimerInstall(system_ticks);
+
     /* cJSON init */
     cJSON_Hooks hooks = {
         .malloc_fn = system_malloc,
@@ -645,6 +649,9 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     default:
         break;
     }
+
+    /* software timer background processing */
+    MultiTimerYield();
 
     return ret;
 }
