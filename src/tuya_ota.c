@@ -79,7 +79,7 @@ int tuya_ota_begin(tuya_ota_handle_t* handle, cJSON* upgrade)
     file_download_init(file_download, &(const file_download_config_t){
         .url = cJSON_GetObjectItem(upgrade, "url")->valuestring,
         .file_size = atol(cJSON_GetObjectItem(upgrade, "size")->valuestring),
-        .timeout_ms = 5000,
+        .timeout_ms = handle->config.timeout_ms,
         .range_length = handle->config.range_size ? handle->config.range_size:1024,
         .transport = &client->matop,
         .event_handler = file_download_event_cb,

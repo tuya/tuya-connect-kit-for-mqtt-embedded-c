@@ -54,6 +54,7 @@ typedef struct {
     tuya_iot_client_t* client;
     tuya_ota_event_cb_t event_cb;
     size_t range_size;
+    uint32_t timeout_ms;
     void* user_data;
 } tuya_ota_config_t;
 
