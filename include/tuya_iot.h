@@ -15,6 +15,7 @@ extern "C" {
 
 #include "mqtt_service.h"
 #include "atop_service.h"
+#include "matop_service.h"
 #include "cJSON.h"
 
 /**
@@ -144,6 +145,7 @@ struct tuya_iot_client_handle {
     tuya_iot_config_t config;
     tuya_activated_data_t activate;
     tuya_mqtt_context_t mqctx;
+    matop_context_t matop;
     tuya_event_msg_t event;
     tuya_activate_token_get_t token_get;
     tuya_binding_info_t* binding;

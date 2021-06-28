@@ -23,7 +23,15 @@
  * 
  */
 #ifndef MQTT_KEEPALIVE_INTERVALIN
-    #define MQTT_KEEPALIVE_INTERVALIN (60U)
+    #define MQTT_KEEPALIVE_INTERVALIN (120)
+#endif
+
+/**
+ * @brief MQTT buffer size.
+ * 
+ */
+#ifndef MQTT_BUFFER_SIZE
+    #define MQTT_BUFFER_SIZE (1024U*2)
 #endif
 
 /**

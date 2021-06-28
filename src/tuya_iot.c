@@ -504,6 +504,8 @@ int tuya_iot_yield(tuya_iot_client_t* client)
 
     switch (client->state) {
     case STATE_MQTT_YIELD:
+        tuya_mqtt_loop(&client->mqctx);
+        matop_serice_yield(&client->matop);
         break;
 
     case STATE_IDLE:
@@ -612,6 +614,10 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     case STATE_MQTT_CONNECTING:
         if (tuya_mqtt_connected(&client->mqctx)) {
             TY_LOGI("Tuya MQTT connected.");
+            matop_serice_init(&client->matop, &(const matop_config_t){
+                .mqctx = &client->mqctx,
+                .devid = client->activate.devid
+            });
             client->nextstate = STATE_MQTT_YIELD;
 
             /* DP event send */
@@ -639,9 +645,6 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     default:
         break;
     }
-
-    /* background processing */
-    tuya_mqtt_loop(&client->mqctx);
 
     return ret;
 }
