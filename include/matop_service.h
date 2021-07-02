@@ -85,6 +85,7 @@ int matop_service_dynamic_cfg_ack(matop_context_t* context,
     const char* rateRule_actId,
     mqtt_atop_response_cb_t notify_cb,
     void* user_data);
+
 #ifdef __cplusplus
 }
 #endif
