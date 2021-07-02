@@ -75,8 +75,16 @@ int matop_service_file_download_range(matop_context_t* context,
 
 int matop_service_put_rst_log(matop_context_t* context, int reason);
 
-int matop_service_dynamic_cfg_get(matop_context_t* context, mqtt_atop_response_cb_t notify_cb, HTTP_DYNAMIC_CFG_TYPE type);
+int matop_service_dynamic_cfg_get(matop_context_t* context,
+    HTTP_DYNAMIC_CFG_TYPE type,
+    mqtt_atop_response_cb_t notify_cb,
+    void* user_data);
 
+int matop_service_dynamic_cfg_ack(matop_context_t* context,
+    const char* timezone_ackId,
+    const char* rateRule_actId,
+    mqtt_atop_response_cb_t notify_cb,
+    void* user_data);
 #ifdef __cplusplus
 }
 #endif
