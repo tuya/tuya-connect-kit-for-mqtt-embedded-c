@@ -165,7 +165,7 @@ static void on_matop_service_file_rawdata_receive(uint16_t msgid, const mqtt_cli
 
 static int matop_request_send(matop_context_t* context, const uint8_t* data, size_t datalen)
 {
-	uint16_t msgid = mqtt_client_publish(context->config.mqctx->mqttctx, context->resquest_topic, data, datalen, MQTT_QOS_0);
+	uint16_t msgid = mqtt_client_publish(context->config.mqctx->mqtt_client, context->resquest_topic, data, datalen, MQTT_QOS_0);
 	
 	if (msgid <= 0) {
 		// TODO add error code
@@ -564,7 +564,10 @@ int matop_service_put_rst_log(matop_context_t* context, int reason)
     return rt;
 }
 
-int matop_service_dynamic_cfg_get(matop_context_t* context, mqtt_atop_response_cb_t notify_cb, HTTP_DYNAMIC_CFG_TYPE type)
+int matop_service_dynamic_cfg_get(matop_context_t* context,
+								  HTTP_DYNAMIC_CFG_TYPE type,
+								  mqtt_atop_response_cb_t notify_cb,
+								  void* user_data)
 {
     if (NULL == context) {
         return OPRT_INVALID_PARM;
@@ -596,7 +599,7 @@ int matop_service_dynamic_cfg_get(matop_context_t* context, mqtt_atop_response_c
     }
 
     buffer_len = strlen(buffer) + 1;
-    TY_LOGV("POST JSON:%s", buffer);
+    TY_LOGV("dynamic cfg get data:%s", buffer);
 
     /* ATOP service request send */
     rt = matop_service_request_async(context,
@@ -607,7 +610,59 @@ int matop_service_dynamic_cfg_get(matop_context_t* context, mqtt_atop_response_c
             .data_len = buffer_len,
         },
         notify_cb,
-        context);
+        user_data);
+    system_free(buffer);
+    return rt;
+}
+
+int matop_service_dynamic_cfg_ack(matop_context_t* context,
+								  const char* timezone_ackId,
+								  const char* rateRule_actId,
+								  mqtt_atop_response_cb_t notify_cb,
+								  void* user_data)
+{
+    if (NULL == context) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+    uint16_t offset = 0;
+
+#define DYNAMIC_CFG_ACK_BUFFER_LEN MATOP_DEFAULT_BUFFER_LEN
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(DYNAMIC_CFG_ACK_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+
+    memset(buffer, 0, DYNAMIC_CFG_ACK_BUFFER_LEN);
+    uint32_t timestamp = system_timestamp();
+    offset = snprintf(buffer, DYNAMIC_CFG_ACK_BUFFER_LEN, "{\"ackList\":[");
+
+    if (timezone_ackId) {
+        offset += snprintf(buffer + offset, DYNAMIC_CFG_ACK_BUFFER_LEN - offset, "{\"type\":\"timezone\",\"ackId\":\"%s\"}", timezone_ackId);
+    }
+
+    if (rateRule_actId) {
+        offset += snprintf(buffer + offset, DYNAMIC_CFG_ACK_BUFFER_LEN - offset, "{\"type\":\"rateRule\",\"ackId\":%s}", rateRule_actId);
+    }
+
+    snprintf(buffer + offset, DYNAMIC_CFG_ACK_BUFFER_LEN, "],\"t\":%d}", system_timestamp());
+
+    buffer_len = strlen(buffer) + 1;
+    TY_LOGV("dynamic cfg ack data:%s", buffer);
+
+    rt = matop_service_request_async(context,
+        &(const mqtt_atop_request_t) {
+            .api = "tuya.device.dynamic.config.ack",
+            .version = "2.0",
+            .data = buffer,
+            .data_len = buffer_len,
+        },
+        notify_cb,
+        user_data);
+
     system_free(buffer);
     return rt;
 }

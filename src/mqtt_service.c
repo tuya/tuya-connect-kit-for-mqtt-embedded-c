@@ -181,7 +181,7 @@ int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context,
 		return OPRT_INVALID_PARM;
 	}
 
-	uint16_t msgid = mqtt_client_subscribe(context->mqttctx, topic, MQTT_QOS_1);
+	uint16_t msgid = mqtt_client_subscribe(context->mqtt_client, topic, MQTT_QOS_1);
 	if (msgid <= 0) {
 		return OPRT_COM_ERROR;
 	}
@@ -211,7 +211,7 @@ int tuya_mqtt_subscribe_message_callback_unregister(tuya_mqtt_context_t* context
 		return OPRT_INVALID_PARM;
 	}
 
-	uint16_t msgid = mqtt_client_unsubscribe(context->mqttctx, topic, MQTT_QOS_1);
+	uint16_t msgid = mqtt_client_unsubscribe(context->mqtt_client, topic, MQTT_QOS_1);
 	if (msgid <= 0) {
 		return OPRT_COM_ERROR;
 	}
@@ -358,7 +358,7 @@ static void mqtt_client_disconnected_cb(void* client, void* userdata)
 	}
 
 	/* reconnect */
-	mqtt_client_connect(context->mqttctx);
+	mqtt_client_connect(context->mqtt_client);
 }
 
 static void mqtt_client_message_cb(void* client, uint16_t msgid, const mqtt_client_message_t* msg, void* userdata)
@@ -404,8 +404,8 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 	}
 
 	/* MQTT Client object new */
-	context->mqttctx = mqtt_client_new();
-	if (context->mqttctx == NULL) {
+	context->mqtt_client = mqtt_client_new();
+	if (context->mqtt_client == NULL) {
 		TY_LOGE("mqtt client new fault.");
 		return OPRT_MALLOC_FAILED;
 	}
@@ -427,7 +427,7 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 		.on_subscribed = mqtt_client_subscribed_cb,
 		.userdata = context
 	};
-	mqtt_status = mqtt_client_init(context->mqttctx, &mqtt_config);
+	mqtt_status = mqtt_client_init(context->mqtt_client, &mqtt_config);
     if( mqtt_status != MQTT_STATUS_SUCCESS ) {
         TY_LOGE( "MQTT init failed: Status = %d.", mqtt_status);
 		return OPRT_COM_ERROR;
@@ -459,7 +459,7 @@ int tuya_mqtt_start(tuya_mqtt_context_t* context)
 
 	mqtt_client_status_t mqtt_status;
 
-	mqtt_status = mqtt_client_connect(context->mqttctx);
+	mqtt_status = mqtt_client_connect(context->mqtt_client);
 	if (MQTT_STATUS_SUCCESS != mqtt_status) {
 		TY_LOGE("MQTT connect fail:%d", mqtt_status);
 		return OPRT_COM_ERROR;
@@ -477,7 +477,7 @@ int tuya_mqtt_stop(tuya_mqtt_context_t* context)
 	TY_LOGD("MQTT unsubscribe result:%d", ret);
 
 	mqtt_client_status_t mqtt_status;
-	mqtt_status = mqtt_client_disconnect(context->mqttctx);
+	mqtt_status = mqtt_client_disconnect(context->mqtt_client);
 	TY_LOGD("MQTT disconnect result:%d", mqtt_status);
 
 	context->manual_disconnect = true;
@@ -578,7 +578,7 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 	}
 
 	// report
-	uint16_t msgid = mqtt_client_publish( context->mqttctx,
+	uint16_t msgid = mqtt_client_publish( context->mqtt_client,
 										  context->signature.topic_out,
 										  buffer,
 										  buffer_len,
@@ -600,7 +600,7 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 		return rt;
 	}
 
-	mqtt_client_yield(context->mqttctx);
+	mqtt_client_yield(context->mqtt_client);
 
 	return rt;
 }
@@ -611,8 +611,8 @@ int tuya_mqtt_destory(tuya_mqtt_context_t* context)
 		return OPRT_COM_ERROR;
 	}
 
-	mqtt_client_status_t mqtt_status = mqtt_client_deinit(context->mqttctx);
-	mqtt_client_free(context->mqttctx);
+	mqtt_client_status_t mqtt_status = mqtt_client_deinit(context->mqtt_client);
+	mqtt_client_free(context->mqtt_client);
 	if (mqtt_status != MQTT_STATUS_SUCCESS) {
 		return OPRT_COM_ERROR;
 	}

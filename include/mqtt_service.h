@@ -125,7 +125,7 @@ typedef struct mqtt_subscribe_handle {
 } mqtt_subscribe_handle_t;
 
 typedef struct {
-    void* mqttctx;
+    void* mqtt_client;
     tuya_mqtt_access_t signature;
     tuya_protocol_handle_t* protocol_list;
     mqtt_subscribe_handle_t* subscribe_list;
