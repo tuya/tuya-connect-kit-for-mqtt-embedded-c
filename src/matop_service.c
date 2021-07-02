@@ -38,13 +38,8 @@ static int matop_service_data_receive_cb(void* context, const uint8_t* input, si
 		return OPRT_CJSON_GET_ERR;
 	}
 
-	bool success = false;
 	uint16_t id = cJSON_GetObjectItem(root, "id")->valueint;
 	cJSON* data = cJSON_GetObjectItem(root, "data");
-
-	if (cJSON_GetObjectItem(data, "success")) {
-		success = cJSON_IsTrue(cJSON_GetObjectItem(data, "success"));
-	}
 
 	/* found message id */
 	mqtt_atop_message_t* target_message = matop->message_list;
@@ -61,9 +56,22 @@ static int matop_service_data_receive_cb(void* context, const uint8_t* input, si
 		return OPRT_COM_ERROR;
 	}
 
+	/* result parse */
+	bool success = false;
+	cJSON* result = NULL;
+
+	if (cJSON_GetObjectItem(data, "result")) {
+		result = cJSON_GetObjectItem(data, "result");
+		success = cJSON_IsTrue(cJSON_GetObjectItem(result, "success"));
+	}
+
+	if (success && cJSON_GetObjectItem(result, "result")) {
+		result = cJSON_GetObjectItem(result, "result");
+	}
+
 	atop_base_response_t response = {
 		.success = success,
-		.result = success ? cJSON_GetObjectItem(cJSON_GetObjectItem(data, "result"), "result"):NULL,
+		.result = result,
 		.t = success ? cJSON_GetObjectItem(data, "t")->valueint:0,
 		.user_data = target_message->user_data
 	};
@@ -226,7 +234,6 @@ int matop_service_request_async(matop_context_t* context,
 								mqtt_atop_response_cb_t notify_cb,
 								void* user_data)
 {
-    // TODO 参数校验
     if (NULL == context || NULL == request) {
         return OPRT_INVALID_PARM;
     }
@@ -234,32 +241,38 @@ int matop_service_request_async(matop_context_t* context,
     int rt = OPRT_OK;
 	matop_context_t* matop = context;
 
-    /* request buffer make */
-    size_t request_datalen = 0;
-    size_t request_bufferlen = strlen(request->data) + 255;
-    uint8_t* request_buffer = system_malloc(request_bufferlen);
-    if (request_buffer == NULL) {
-        TY_LOGE("response_buffer malloc fail");
-        return OPRT_MALLOC_FAILED;
-    }
-
+	/* handle init */
 	mqtt_atop_message_t* message_handle = system_malloc(sizeof(mqtt_atop_message_t));
 	if (message_handle == NULL) {
 		TY_LOGE("response_buffer malloc fail");
         return OPRT_MALLOC_FAILED;
 	}
-
 	message_handle->next = NULL;
 	message_handle->id = ++matop->id_cnt;
 	message_handle->timeout = system_ticks() + (request->timeout == 0 ? 5000:request->timeout);
-	TY_LOGV("system_ticks:%d, message_handle->timeout:%d", system_ticks(), message_handle->timeout);
 	message_handle->notify_cb = notify_cb;
 	message_handle->user_data = user_data;
 
-    request_datalen = snprintf(request_buffer, request_bufferlen, MQTT_ATOP_REQUEST_FMT, 
-						message_handle->id, request->api, request->version, 
-						system_timestamp(), (char*)request->data);
+	/* request buffer make */
+    size_t request_datalen = 0;
+    size_t request_bufferlen = strlen(request->data) + 128;
+    uint8_t* request_buffer = system_malloc(request_bufferlen);
+    if (request_buffer == NULL) {
+        TY_LOGE("response_buffer malloc fail");
+		system_free(message_handle);
+        return OPRT_MALLOC_FAILED;
+    }
 
+	/* buffer format */
+    request_datalen = snprintf(request_buffer, request_bufferlen,
+						"{\"id\":%d,\"a\":\"%s\",\"t\":%d,\"data\":%s",
+						message_handle->id, request->api, system_timestamp(), (char*)request->data);
+	if (request->version) {
+		request_datalen += snprintf(request_buffer + request_datalen, request_bufferlen - request_datalen,
+									",\"v\":\"%s\"",
+									request->version);
+	}
+	request_datalen += snprintf(request_buffer + request_datalen, request_bufferlen - request_datalen, "}");
 	TY_LOGD("atop request: %s", request_buffer);
 
     rt = matop_request_send(matop, (const uint8_t*)request_buffer, request_datalen);
@@ -522,7 +535,6 @@ int matop_service_put_rst_log(matop_context_t* context, int reason)
     /* Format rst_info JSON buffer */
     snprintf(rst_buffer, RST_BUFFER_MAX, 
         "\"data\":%d", reason);
-
 
     /* post data */
     #define UPDATE_VERSION_BUFFER_LEN 196
