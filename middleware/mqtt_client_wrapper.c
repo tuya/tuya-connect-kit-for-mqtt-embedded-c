@@ -184,6 +184,9 @@ mqtt_client_status_t mqtt_client_connect(void* client)
     if (MQTTSuccess != mqtt_status) {
         log_error("mqtt connect err: %s(%d)", MQTT_Status_strerror(mqtt_status), mqtt_status);
         context->network.disconnect(&context->network);
+        if (MQTTNotAuthorized == mqtt_status) {
+            return MQTT_STATUS_NOT_AUTHORIZED;
+        }
         return MQTT_STATUS_CONNECT_FAILED;
     }
 
