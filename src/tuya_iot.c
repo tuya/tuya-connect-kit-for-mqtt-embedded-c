@@ -357,20 +357,6 @@ static int run_state_startup_update(tuya_iot_client_t* client)
 {
     int rt = OPRT_OK;
 
-    atop_base_response_t response = {0};
-
-    rt = atop_service_dynamic_cfg_get_v20(  client->activate.devid,
-                                            client->activate.seckey,
-                                            HTTP_DYNAMIC_CFG_ALL,
-                                            &response);
-    if (rt != OPRT_OK) {
-        TY_LOGE("dynamic_cfg_get error:%d", rt);
-        return rt;
-    }
-
-    /* TODO result process*/
-    atop_base_response_free(&response);
-
     /* Update client version */
     tuya_iot_version_update_sync(client);
 
@@ -637,17 +623,7 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         break;
 
     case STATE_STARTUP_UPDATE:
-        if (run_state_startup_update(client) == OPRT_LINK_CORE_HTTP_GW_NOT_EXIST) {
-            /* Reset activated data */
-            client->nextstate = STATE_RESET;
-
-            /* DP event send */
-            client->event.id = TUYA_EVENT_RESET;
-            client->event.type = TUYA_DATE_TYPE_INTEGER;
-            client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_UNACTIVE;
-            iot_dispatch_event(client);
-            break;
-        }
+        run_state_startup_update(client);
         client->nextstate = STATE_MQTT_CONNECT_START;
         break;
 
