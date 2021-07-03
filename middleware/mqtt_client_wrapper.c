@@ -165,7 +165,7 @@ mqtt_client_status_t mqtt_client_connect(void* client)
     log_debug("TLS connected.");
 
     bool pSessionPresent = false;
-			
+
     /* Send MQTT CONNECT packet to broker. */
     mqtt_status = MQTT_Connect( &context->mqclient,
         &(const MQTTConnectInfo_t){
