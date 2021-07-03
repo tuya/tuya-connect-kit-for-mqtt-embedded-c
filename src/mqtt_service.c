@@ -29,6 +29,8 @@
 #define MQTT_REPORT_FMT "{\"protocol\":%d,\"t\":%d,\"data\":%s}"
 #define MQTT_FMT_MAX (64)
 
+static void on_subscribe_message_default(uint16_t msgid, const mqtt_client_message_t* msg, void* userdata);
+
 typedef struct {
 	uint32_t sequence;
 	uint32_t source;
@@ -177,7 +179,7 @@ int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context,
 												  mqtt_subscribe_message_cb_t cb,
 												  void* userdata)
 {
-	if (!context || !topic || !cb) {
+	if (!context || !topic) {
 		return OPRT_INVALID_PARM;
 	}
 
@@ -207,7 +209,11 @@ int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context,
 	newtarget->topic = system_calloc(1, newtarget->topic_length + 1); //strdup
 	strcpy(newtarget->topic, topic);
 
-	newtarget->cb = cb;
+	if (cb) {
+		newtarget->cb = cb;
+	} else {
+		newtarget->cb = on_subscribe_message_default;
+	}
 	newtarget->userdata = userdata;
 	/* LOCK */
 	newtarget->next = context->subscribe_list;
@@ -332,7 +338,7 @@ static int tuya_protocol_message_parse_process(tuya_mqtt_context_t* context, con
 	return OPRT_OK;
 }
 
-static void on_protocol_subscribe_message(uint16_t msgid, const mqtt_client_message_t* msg, void* userdata)
+static void on_subscribe_message_default(uint16_t msgid, const mqtt_client_message_t* msg, void* userdata)
 {
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
 	int ret = tuya_protocol_message_parse_process(context, msg->payload, msg->length);
@@ -351,7 +357,7 @@ static void mqtt_client_connected_cb(void* client, void* userdata)
 
 	tuya_mqtt_subscribe_message_callback_register(context, 
 											      context->signature.topic_in, 
-											      on_protocol_subscribe_message, 
+											      on_subscribe_message_default, 
 											      userdata);
 	TY_LOGD("SUBSCRIBE sent for topic %s to broker.", context->signature.topic_in);
 	context->is_connected = true;
