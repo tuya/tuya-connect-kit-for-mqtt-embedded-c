@@ -155,11 +155,13 @@ int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_
 
 int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_protocol_callback_t cb);
 
+int tuya_mqtt_protocol_data_publish(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length);
+
+int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, const char* topic, uint16_t protocol_id, uint8_t* data, uint16_t length);
+
 int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context, const char* topic, mqtt_subscribe_message_cb_t cb, void* userdata);
 
 int tuya_mqtt_subscribe_message_callback_unregister(tuya_mqtt_context_t* context, const char* topic);
-
-int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length);
 
 int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel, int percent);
 

@@ -566,7 +566,7 @@ int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protoco
 	return OPRT_OK;
 }
 
-int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length)
+int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, const char* topic, uint16_t protocol_id, uint8_t* data, uint16_t length)
 {
 	if (context == NULL || context->is_inited == false) {
 		return OPRT_INVALID_PARM;
@@ -606,14 +606,19 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 		return OPRT_COM_ERROR;
 	}
 
-	// report
+	/* mqtt client publish */
 	uint16_t msgid = mqtt_client_publish( context->mqtt_client,
-										  context->signature.topic_out,
+										  topic,
 										  buffer,
 										  buffer_len,
 										  MQTT_QOS_1);
 	system_free(buffer);
 	return msgid;
+}
+
+int tuya_mqtt_protocol_data_publish(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length)
+{
+	return tuya_mqtt_protocol_data_publish_with_topic(context, context->signature.topic_out, protocol_id, data, length);
 }
 
 int tuya_mqtt_loop(tuya_mqtt_context_t* context)
@@ -680,7 +685,7 @@ int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel,
     }
 
     int buffer_size = sprintf((char*)data_buf,"{\"progress\":\"%d\",\"firmwareType\":%d}", percent, channel);
-	uint16_t msgid = tuya_mqtt_report_data(context, PRO_UPGE_PUSH, data_buf, (uint16_t)buffer_size);
+	uint16_t msgid = tuya_mqtt_protocol_data_publish(context, PRO_UPGE_PUSH, data_buf, (uint16_t)buffer_size);
     system_free(data_buf);
 	if (msgid <= 0) {
     	return OPRT_COM_ERROR;

@@ -718,7 +718,7 @@ int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps
     }
 
     /* Report buffer */
-    uint16_t mgsid = tuya_mqtt_report_data(&client->mqctx, PRO_DATA_PUSH, (uint8_t*)buffer, printlen);
+    uint16_t mgsid = tuya_mqtt_protocol_data_publish(&client->mqctx, PRO_DATA_PUSH, (uint8_t*)buffer, printlen);
     system_free(buffer);
 
     if (mgsid <= 0) {
