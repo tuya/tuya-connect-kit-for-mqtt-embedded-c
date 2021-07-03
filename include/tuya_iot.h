@@ -43,7 +43,6 @@ extern "C" {
 /* tuya sdk gateway reset type */
 typedef enum {
     TUYA_EVENT_RESET,
-    TUYA_EVENT_RESET_COMPLETE,
     TUYA_EVENT_BIND_START,
     TUYA_EVENT_BIND_TOKEN_ON,
     TUYA_EVENT_ACTIVATE_SUCCESSED,
@@ -52,6 +51,7 @@ typedef enum {
     TUYA_EVENT_DP_RECEIVE,
     TUYA_EVENT_DP_RECEIVE_CJSON,
     TUYA_EVENT_UPGRADE_NOTIFY,
+    TUYA_EVENT_RESET_COMPLETE,
 } tuya_event_id_t;
 
 #define EVENT_ID2STR(S)\
@@ -64,7 +64,8 @@ typedef enum {
 ((S) == TUYA_EVENT_DP_RECEIVE ? "TUYA_EVENT_DP_RECEIVE":\
 ((S) == TUYA_EVENT_DP_RECEIVE_CJSON ? "TUYA_EVENT_DP_RECEIVE_CJSON":\
 ((S) == TUYA_EVENT_UPGRADE_NOTIFY ? "TUYA_EVENT_UPGRADE_NOTIFY":\
-"Unknown")))))))))
+((S) == TUYA_EVENT_RESET_COMPLETE ? "TUYA_EVENT_RESET_COMPLETE":\
+"Unknown"))))))))))
 
 typedef enum {
     TUYA_STATUS_UNACTIVE = 0,
