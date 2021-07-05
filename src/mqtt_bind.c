@@ -24,7 +24,7 @@ typedef enum {
     STATE_MQTT_BIND_TOKEN_WAIT,
 } mqtt_bind_state_t;
 
-static void mqtt_bind_activate_token_on(tuya_mqtt_event_t* ev)
+static void mqtt_bind_activate_token_on(tuya_protocol_event_t* ev)
 {
     cJSON* data = (cJSON*)(ev->data);
     tuya_binding_info_t* binding = (tuya_binding_info_t*)(ev->user_data);
