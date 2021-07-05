@@ -13,7 +13,6 @@
 #include "atop_base.h"
 
 #define MATOP_DEFAULT_BUFFER_LEN (128)
-#define MQTT_ATOP_REQUEST_FMT "{\"id\":%d,\"a\":\"%s\",\"v\":\"%s\",\"t\":%d,\"data\":%s}"
 
 /* -------------------------------------------------------------------------- */
 /*                              Internal callback                             */
