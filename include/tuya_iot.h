@@ -17,6 +17,7 @@ extern "C" {
 #include "atop_service.h"
 #include "matop_service.h"
 #include "cJSON.h"
+#include "MultiTimer.h"
 
 /**
  * @brief SDK Version info
@@ -150,6 +151,7 @@ struct tuya_iot_client_handle {
     tuya_event_msg_t event;
     tuya_activate_token_get_t token_get;
     tuya_binding_info_t* binding;
+    MultiTimer check_upgrade_timer;
     uint8_t retry_count;
     uint8_t state;
     uint8_t nextstate;

@@ -360,6 +360,13 @@ static void mqtt_client_unbind_on(void* context, void* user_data)
     iot_dispatch_event(client);
 }
 
+static void check_auto_upgrade_timeout_on(MultiTimer* timer, void* user_data)
+{
+    tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
+
+    matop_service_auto_upgrade_info_get(&client->matop, mqtt_atop_upgrade_info_notify_cb, client);
+}
+
 /* -------------------------------------------------------------------------- */
 /*                       Internal machine state process                       */
 /* -------------------------------------------------------------------------- */
@@ -370,6 +377,9 @@ static int run_state_startup_update(tuya_iot_client_t* client)
 
     /* Update client version */
     tuya_iot_version_update_sync(client);
+
+    /* Auto check upgrade timer start */
+    MultiTimerStart(&client->check_upgrade_timer, 1000 * 15);
 
     return rt;
 }
@@ -492,6 +502,9 @@ int tuya_iot_init(tuya_iot_client_t* client, const tuya_iot_config_t* config)
     if (activated_data_read(client->config.storage_namespace, &client->activate) == OPRT_OK) {
         client->is_activated = true;
     }
+
+    /* Auto check upgrade timer init */
+    MultiTimerInit(&client->check_upgrade_timer, AUTO_UPGRADE_CHECK_INTERVAL, check_auto_upgrade_timeout_on, client);
 
     client->state = STATE_IDLE;
     client->nextstate = STATE_IDLE;

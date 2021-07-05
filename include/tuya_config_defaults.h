@@ -42,4 +42,12 @@
     #define DEFAULT_HTTP_TIMEOUT (5000U)
 #endif
 
+/**
+ * @brief Defaults auto check upgrade interval.
+ * 
+ */
+#ifndef AUTO_UPGRADE_CHECK_INTERVAL
+    #define AUTO_UPGRADE_CHECK_INTERVAL (1000U*60*60*6) // 6 hours
+#endif
+
 #endif /* ifndef TUYA_CONFIG_DEFAULTS_H_ */
