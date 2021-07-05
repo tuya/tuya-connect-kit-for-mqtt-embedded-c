@@ -281,7 +281,28 @@ static void mqtt_service_reset_cmd_on(tuya_protocol_event_t* ev)
     TY_LOGI("STATE_RESET...");
 }
 
-static void mqtt_service_upgrade_notify_on(tuya_protocol_event_t* ev)
+static void mqtt_atop_upgrade_info_notify_cb(atop_base_response_t* response, void* user_data)
+{
+    tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
+
+    if (response->success == false) {
+        matop_service_upgrade_status_update(&client->matop, 0, 4);
+        return;
+    }
+
+    /* Param verify */
+    if (response->result == NULL) {
+        return;
+    }
+
+    /* Send DP cJSON format event*/
+    client->event.id = TUYA_EVENT_UPGRADE_NOTIFY;
+    client->event.type = TUYA_DATE_TYPE_JSON;
+    client->event.value.asJSON = response->result;
+    iot_dispatch_event(client);
+}
+
+static void mqtt_service_upgrade_notify_on(tuya_mqtt_event_t* ev)
 {
     tuya_iot_client_t* client = ev->user_data;
     cJSON* data = (cJSON*)(ev->data);
@@ -291,24 +312,12 @@ static void mqtt_service_upgrade_notify_on(tuya_protocol_event_t* ev)
         ota_channel = cJSON_GetObjectItem(data, "firmwareType")->valueint;
     }
 
-    /* atop response instantiate construct */
-    atop_base_response_t response = {0};
-
-    int rt = atop_service_upgrade_info_get_v44(client->activate.devid,
-                        client->activate.seckey, ota_channel, &response);
+    int rt = matop_service_upgrade_info_get(&client->matop, ota_channel, 
+                                        mqtt_atop_upgrade_info_notify_cb, client);
     if (rt != OPRT_OK) {
         TY_LOGE("upgrade info get error:%d", rt);
         return;
     }
-
-    /* Send DP cJSON format event*/
-    client->event.id = TUYA_EVENT_UPGRADE_NOTIFY;
-    client->event.type = TUYA_DATE_TYPE_JSON;
-    client->event.value.asJSON = response.result;
-    iot_dispatch_event(client);
-
-    /* Free response */
-    atop_base_response_free(&response);
 }
 
 static void mqtt_client_connected_on(void* context, void* user_data)
@@ -508,9 +517,7 @@ int tuya_iot_reset(tuya_iot_client_t *client)
 {
     int ret = OPRT_OK;
     if (tuya_iot_activated(client)) {
-        ret = atop_service_client_reset(
-                client->activate.devid,
-                client->activate.seckey);
+        ret = matop_service_client_reset(&client->matop);
     }
 
     client->event.id = TUYA_EVENT_RESET;

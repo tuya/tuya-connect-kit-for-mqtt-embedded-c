@@ -60,8 +60,9 @@ static int matop_service_data_receive_cb(void* context, const uint8_t* input, si
 	cJSON* result = NULL;
 
 	if (cJSON_GetObjectItem(data, "result")) {
-		result = cJSON_GetObjectItem(cJSON_GetObjectItem(data, "result"), "result");
+		result = cJSON_GetObjectItem(data, "result");
 		success = cJSON_IsTrue(cJSON_GetObjectItem(result, "success"));
+		result = cJSON_GetObjectItem(result, "result");
 	}
 
 	atop_base_response_t response = {
