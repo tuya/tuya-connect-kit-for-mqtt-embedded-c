@@ -311,7 +311,7 @@ static void mqtt_service_upgrade_notify_on(tuya_protocol_event_t* ev)
     atop_base_response_free(&response);
 }
 
-void mqtt_service_connected_on(void* context, void* user_data)
+static void mqtt_client_connected_on(void* context, void* user_data)
 {
     tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
 
@@ -327,7 +327,7 @@ void mqtt_service_connected_on(void* context, void* user_data)
     iot_dispatch_event(client);
 }
 
-void mqtt_service_disconnect_on(void* context, void* user_data)
+static void mqtt_client_disconnect_on(void* context, void* user_data)
 {
     tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
     /* Send disconnect event*/
@@ -336,9 +336,11 @@ void mqtt_service_disconnect_on(void* context, void* user_data)
     iot_dispatch_event(client);
 }
 
-void mqtt_service_unbind_on(void* context, void* user_data)
+static void mqtt_client_unbind_on(void* context, void* user_data)
 {
     tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
+    TY_LOGI("MQTT unbind callback.");
+
     /* Reset activated data */
     client->nextstate = STATE_RESET;
 
@@ -379,9 +381,9 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
         .localkey = client->activate.localkey,
         .timeout = MQTT_RECV_BLOCK_TIME_MS,
         .user_data = client,
-        .on_connected = mqtt_service_connected_on,
-        .on_disconnect = mqtt_service_disconnect_on,
-        .on_unbind = mqtt_service_unbind_on,
+        .on_connected = mqtt_client_connected_on,
+        .on_disconnect = mqtt_client_disconnect_on,
+        .on_unbind = mqtt_client_unbind_on,
     });
     if (OPRT_OK != rt) {
         TY_LOGE("tuya mqtt init error:%d", rt);
