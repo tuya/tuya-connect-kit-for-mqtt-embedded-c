@@ -47,7 +47,7 @@
  * 
  */
 #ifndef AUTO_UPGRADE_CHECK_INTERVAL
-    #define AUTO_UPGRADE_CHECK_INTERVAL (1000U*60*60*6) // 6 hours
+    #define AUTO_UPGRADE_CHECK_INTERVAL (1000U*60*60*24) // 24 hours
 #endif
 
 #endif /* ifndef TUYA_CONFIG_DEFAULTS_H_ */
