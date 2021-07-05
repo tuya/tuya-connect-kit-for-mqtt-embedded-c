@@ -28,6 +28,8 @@ typedef struct {
     cJSON* result;
     int32_t t;
     void* user_data;
+    uint8_t* raw_data;
+    size_t raw_data_len;
 } atop_base_response_t;
 
 int atop_base_request(const atop_base_request_t* request, atop_base_response_t* response);

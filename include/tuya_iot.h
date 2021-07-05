@@ -15,7 +15,9 @@ extern "C" {
 
 #include "mqtt_service.h"
 #include "atop_service.h"
+#include "matop_service.h"
 #include "cJSON.h"
+#include "MultiTimer.h"
 
 /**
  * @brief SDK Version info
@@ -42,7 +44,6 @@ extern "C" {
 /* tuya sdk gateway reset type */
 typedef enum {
     TUYA_EVENT_RESET,
-    TUYA_EVENT_RESET_COMPLETE,
     TUYA_EVENT_BIND_START,
     TUYA_EVENT_BIND_TOKEN_ON,
     TUYA_EVENT_ACTIVATE_SUCCESSED,
@@ -51,6 +52,8 @@ typedef enum {
     TUYA_EVENT_DP_RECEIVE,
     TUYA_EVENT_DP_RECEIVE_CJSON,
     TUYA_EVENT_UPGRADE_NOTIFY,
+    TUYA_EVENT_RESET_COMPLETE,
+    TUYA_EVENT_TIMESTAMP_SYNC,
 } tuya_event_id_t;
 
 #define EVENT_ID2STR(S)\
@@ -63,7 +66,9 @@ typedef enum {
 ((S) == TUYA_EVENT_DP_RECEIVE ? "TUYA_EVENT_DP_RECEIVE":\
 ((S) == TUYA_EVENT_DP_RECEIVE_CJSON ? "TUYA_EVENT_DP_RECEIVE_CJSON":\
 ((S) == TUYA_EVENT_UPGRADE_NOTIFY ? "TUYA_EVENT_UPGRADE_NOTIFY":\
-"Unknown")))))))))
+((S) == TUYA_EVENT_RESET_COMPLETE ? "TUYA_EVENT_RESET_COMPLETE":\
+((S) == TUYA_EVENT_TIMESTAMP_SYNC ? "TUYA_EVENT_TIMESTAMP_SYNC":\
+"Unknown")))))))))))
 
 typedef enum {
     TUYA_STATUS_UNACTIVE = 0,
@@ -144,9 +149,11 @@ struct tuya_iot_client_handle {
     tuya_iot_config_t config;
     tuya_activated_data_t activate;
     tuya_mqtt_context_t mqctx;
+    matop_context_t matop;
     tuya_event_msg_t event;
     tuya_activate_token_get_t token_get;
     tuya_binding_info_t* binding;
+    MultiTimer check_upgrade_timer;
     uint8_t retry_count;
     uint8_t state;
     uint8_t nextstate;

@@ -29,6 +29,8 @@
 #define MQTT_REPORT_FMT "{\"protocol\":%d,\"t\":%d,\"data\":%s}"
 #define MQTT_FMT_MAX (64)
 
+static void on_subscribe_message_default(uint16_t msgid, const mqtt_client_message_t* msg, void* userdata);
+
 typedef struct {
 	uint32_t sequence;
 	uint32_t source;
@@ -83,6 +85,9 @@ static int tuya_mqtt_signature_tool(const tuya_meta_info_t *input, tuya_mqtt_acc
     return OPRT_OK;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                              PV22 packet parse                             */
+/* -------------------------------------------------------------------------- */
 static int pv22_packet_encode(const uint8_t* key, const pv22_packet_object_t* input, uint8_t* output, size_t* olen)
 {
 	int rt = OPRT_OK;
@@ -166,7 +171,109 @@ static int pv22_packet_decode(const uint8_t* key, const uint8_t* input, size_t i
 	return OPRT_OK;
 }
 
-static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* payload, size_t payload_len)
+/* -------------------------------------------------------------------------- */
+/*                          Subscribe message handle                          */
+/* -------------------------------------------------------------------------- */
+int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context,
+												  const char* topic,
+												  mqtt_subscribe_message_cb_t cb,
+												  void* userdata)
+{
+	if (!context || !topic) {
+		return OPRT_INVALID_PARM;
+	}
+
+	uint16_t msgid = mqtt_client_subscribe(context->mqtt_client, topic, MQTT_QOS_1);
+	if (msgid <= 0) {
+		return OPRT_COM_ERROR;
+	}
+
+	/* Repetition filter */
+	mqtt_subscribe_handle_t* target = context->subscribe_list;
+	while (target) {
+		if (!memcmp(target->topic, topic, target->topic_length) && target->cb == cb) {
+			TY_LOGE("Repetition:%s", topic);
+			return OPRT_COM_ERROR;
+		}
+		target = target->next;
+	}
+
+	/* Intser new handle */
+	mqtt_subscribe_handle_t* newtarget = system_calloc(1, sizeof(mqtt_subscribe_handle_t));
+	if (!newtarget) {
+		TY_LOGE("malloc error");
+		return OPRT_MALLOC_FAILED;
+	}
+
+	newtarget->topic_length = strlen(topic);
+	newtarget->topic = system_calloc(1, newtarget->topic_length + 1); //strdup
+	strcpy(newtarget->topic, topic);
+
+	if (cb) {
+		newtarget->cb = cb;
+	} else {
+		newtarget->cb = on_subscribe_message_default;
+	}
+	newtarget->userdata = userdata;
+	/* LOCK */
+	newtarget->next = context->subscribe_list;
+	context->subscribe_list = newtarget;
+	/* UNLOCK */
+	return OPRT_OK;
+}
+
+int tuya_mqtt_subscribe_message_callback_unregister(tuya_mqtt_context_t* context, const char* topic)
+{
+	if (!context || !topic) {
+		return OPRT_INVALID_PARM;
+	}
+
+	size_t topic_length = strlen(topic);
+
+	/* LOCK */
+	/* Remove object form list */
+	mqtt_subscribe_handle_t** target = &context->subscribe_list;
+	while (*target) {
+		mqtt_subscribe_handle_t* entry = *target;
+		if (entry->topic_length == topic_length &&\
+			!memcmp(topic, entry->topic, topic_length)) {
+			*target = entry->next;
+			system_free(entry->topic);
+			system_free(entry);
+		} else {
+			target = &entry->next;
+		}
+	}
+	/* UNLOCK */
+
+	uint16_t msgid = mqtt_client_unsubscribe(context->mqtt_client, topic, MQTT_QOS_1);
+	if (msgid <= 0) {
+		return OPRT_COM_ERROR;
+	}
+
+	return OPRT_OK;
+}
+
+static void mqtt_subscribe_message_distribute(tuya_mqtt_context_t* context, uint16_t msgid, const mqtt_client_message_t* msg)
+{
+	const char* topic = msg->topic;
+	size_t topic_length = strlen(msg->topic);
+
+	/* LOCK */
+	mqtt_subscribe_handle_t* target = context->subscribe_list;
+	for (; target; target = target->next) {
+		if (target->topic_length == topic_length &&\
+			!memcmp(topic, target->topic, target->topic_length)) {
+			target->cb(msgid, msg, target->userdata);
+		}
+	}
+	/* UNLOCK */
+}
+
+/* -------------------------------------------------------------------------- */
+/*                       Tuya internal subscribe message                      */
+/* -------------------------------------------------------------------------- */
+static int tuya_protocol_message_parse_process(tuya_mqtt_context_t* context, const uint8_t* payload, size_t payload_len)
 {
 	int ret = OPRT_OK;
 
@@ -213,10 +320,11 @@ static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* paylo
     }
 
     /* dispatch */
-	tuya_mqtt_event_t event;
+	tuya_protocol_event_t event;
 	event.event_id = protocol_id;
 	event.data = cJSON_GetObjectItem(root, "data");
 
+	/* LOCK */
 	tuya_protocol_handle_t* target = context->protocol_list;
 	for (; target; target = target->next) {
 		if (target->id == protocol_id) {
@@ -224,19 +332,38 @@ static int mqtt_event_data_on(tuya_mqtt_context_t* context, const uint8_t* paylo
 			target->cb(&event);
 		}
 	}
+	/* UNLOCK */
 
 	cJSON_Delete(root);
 	return OPRT_OK;
 }
 
+static void on_subscribe_message_default(uint16_t msgid, const mqtt_client_message_t* msg, void* userdata)
+{
+	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
+	int ret = tuya_protocol_message_parse_process(context, msg->payload, msg->length);
+	if(ret != OPRT_OK) {
+		TY_LOGE("protocol message parse error:%d", ret);
+	}
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         MQTT Client event callback                         */
+/* -------------------------------------------------------------------------- */
 static void mqtt_client_connected_cb(void* client, void* userdata)
 {
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
 	TY_LOGD("mqtt client connected!");
 
-	uint16_t msgid = mqtt_client_subscribe(client, context->signature.topic_in, MQTT_QOS_1);
-	TY_LOGD("SUBSCRIBE id:%d sent for topic %s to broker.", msgid, context->signature.topic_in);
+	tuya_mqtt_subscribe_message_callback_register(context, 
+											      context->signature.topic_in, 
+											      on_subscribe_message_default, 
+											      userdata);
+	TY_LOGD("SUBSCRIBE sent for topic %s to broker.", context->signature.topic_in);
 	context->is_connected = true;
+	if (context->on_connected) {
+		context->on_connected(context, context->user_data);
+	}
 }
 
 static void mqtt_client_disconnected_cb(void* client, void* userdata)
@@ -244,13 +371,9 @@ static void mqtt_client_disconnected_cb(void* client, void* userdata)
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
 	TY_LOGD("mqtt client disconnected!");
 	context->is_connected = false;
-
-	if (context->manual_disconnect == true) {
-		return;
+	if (context->on_disconnect) {
+		context->on_disconnect(context, context->user_data);
 	}
-
-	/* reconnect */
-	mqtt_client_connect(context->mqttctx);
 }
 
 static void mqtt_client_message_cb(void* client, uint16_t msgid, const mqtt_client_message_t* msg, void* userdata)
@@ -259,12 +382,19 @@ static void mqtt_client_message_cb(void* client, uint16_t msgid, const mqtt_clie
 
 	/* topic filter */
 	TY_LOGD("recv message TopicName:%s, payload len:%d", msg->topic, msg->length);
-
-	if (memcmp(msg->topic, context->signature.topic_in, strlen(msg->topic)) == 0) {
-		mqtt_event_data_on(context, msg->payload, msg->length);
-	}
+	mqtt_subscribe_message_distribute(context, msgid, msg);
 }
 
+static void mqtt_client_subscribed_cb(void* client, uint16_t msgid, void* userdata)
+{
+	client = client;
+	userdata = userdata;
+	TY_LOGD("Subscribe successed ID:%d", msgid);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                Tuya MQTT API                               */
+/* -------------------------------------------------------------------------- */
 int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* config)
 {
 	int rt = OPRT_OK;
@@ -272,6 +402,12 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 
 	/* Clean to zero */
 	memset(context, 0, sizeof(tuya_mqtt_context_t));
+
+	/* configuration */
+	context->user_data = config->user_data;
+	context->on_unbind = config->on_unbind;
+	context->on_connected = config->on_connected;
+	context->on_disconnect = config->on_disconnect;
 
 	/* Device token signature */
 	rt = tuya_mqtt_signature_tool(
@@ -289,8 +425,8 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 	}
 
 	/* MQTT Client object new */
-	context->mqttctx = mqtt_client_new();
-	if (context->mqttctx == NULL) {
+	context->mqtt_client = mqtt_client_new();
+	if (context->mqtt_client == NULL) {
 		TY_LOGE("mqtt client new fault.");
 		return OPRT_MALLOC_FAILED;
 	}
@@ -309,9 +445,10 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 		.on_connected = mqtt_client_connected_cb,
 		.on_disconnected = mqtt_client_disconnected_cb,
 		.on_message = mqtt_client_message_cb,
+		.on_subscribed = mqtt_client_subscribed_cb,
 		.userdata = context
 	};
-	mqtt_status = mqtt_client_init(context->mqttctx, &mqtt_config);
+	mqtt_status = mqtt_client_init(context->mqtt_client, &mqtt_config);
     if( mqtt_status != MQTT_STATUS_SUCCESS ) {
         TY_LOGE( "MQTT init failed: Status = %d.", mqtt_status);
 		return OPRT_COM_ERROR;
@@ -343,7 +480,15 @@ int tuya_mqtt_start(tuya_mqtt_context_t* context)
 
 	mqtt_client_status_t mqtt_status;
 
-	mqtt_status = mqtt_client_connect(context->mqttctx);
+	mqtt_status = mqtt_client_connect(context->mqtt_client);
+	if (MQTT_STATUS_NOT_AUTHORIZED == mqtt_status) {
+		TY_LOGE("MQTT connect fail:%d", mqtt_status);
+		if (context->on_unbind) {
+			context->on_unbind(context, context->user_data);
+		}
+		return OPRT_LINK_CORE_MQTT_NOT_AUTHORIZED;
+	}
+
 	if (MQTT_STATUS_SUCCESS != mqtt_status) {
 		TY_LOGE("MQTT connect fail:%d", mqtt_status);
 		return OPRT_COM_ERROR;
@@ -357,18 +502,18 @@ int tuya_mqtt_stop(tuya_mqtt_context_t* context)
 		return OPRT_INVALID_PARM;
 	}
 
-	mqtt_client_status_t mqtt_status;
-	mqtt_status = mqtt_client_unsubscribe(context->mqttctx, context->signature.topic_in, 1);
-	TY_LOGD("MQTT unsubscribe result:%d", mqtt_status);
+	int ret = tuya_mqtt_subscribe_message_callback_unregister(context, context->signature.topic_in);
+	TY_LOGD("MQTT unsubscribe result:%d", ret);
 
-	mqtt_status = mqtt_client_disconnect(context->mqttctx);
+	mqtt_client_status_t mqtt_status;
+	mqtt_status = mqtt_client_disconnect(context->mqtt_client);
 	TY_LOGD("MQTT disconnect result:%d", mqtt_status);
 
 	context->manual_disconnect = true;
 	return OPRT_OK;
 }
 
-int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb, void* user_data)
+int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_protocol_callback_t cb, void* user_data)
 {
 	if (context == NULL || context->is_inited == false || cb == NULL) {
 		return OPRT_INVALID_PARM;
@@ -398,13 +543,14 @@ int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_
 	return OPRT_OK;
 }
 
-int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb)
+int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_protocol_callback_t cb)
 {
 	if (context == NULL || context->is_inited == false || cb == NULL) {
 		return OPRT_INVALID_PARM;
 	}
 
 	/* LOCK */
+	/* Remove object form list */
 	tuya_protocol_handle_t** target = &context->protocol_list;
 	while (*target) {
 		tuya_protocol_handle_t* entry = *target;
@@ -420,7 +566,7 @@ int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protoco
 	return OPRT_OK;
 }
 
-int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length)
+int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, const char* topic, uint16_t protocol_id, uint8_t* data, uint16_t length)
 {
 	if (context == NULL || context->is_inited == false) {
 		return OPRT_INVALID_PARM;
@@ -460,14 +606,19 @@ int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, ui
 		return OPRT_COM_ERROR;
 	}
 
-	// report
-	uint16_t msgid = mqtt_client_publish( context->mqttctx,
-										  context->signature.topic_out,
+	/* mqtt client publish */
+	uint16_t msgid = mqtt_client_publish( context->mqtt_client,
+										  topic,
 										  buffer,
 										  buffer_len,
 										  MQTT_QOS_1);
 	system_free(buffer);
 	return msgid;
+}
+
+int tuya_mqtt_protocol_data_publish(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length)
+{
+	return tuya_mqtt_protocol_data_publish_with_topic(context, context->signature.topic_out, protocol_id, data, length);
 }
 
 int tuya_mqtt_loop(tuya_mqtt_context_t* context)
@@ -483,7 +634,17 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 		return rt;
 	}
 
-	mqtt_client_yield(context->mqttctx);
+	/* reconnect */
+	if (context->is_connected == false) {
+		if (mqtt_client_connect(context->mqtt_client) == MQTT_STATUS_NOT_AUTHORIZED) {
+			if(context->on_unbind) {
+				context->on_unbind(context, context->user_data);
+			}
+			return rt;
+		}
+	}
+
+	mqtt_client_yield(context->mqtt_client);
 
 	return rt;
 }
@@ -494,8 +655,8 @@ int tuya_mqtt_destory(tuya_mqtt_context_t* context)
 		return OPRT_COM_ERROR;
 	}
 
-	mqtt_client_status_t mqtt_status = mqtt_client_deinit(context->mqttctx);
-	mqtt_client_free(context->mqttctx);
+	mqtt_client_status_t mqtt_status = mqtt_client_deinit(context->mqtt_client);
+	mqtt_client_free(context->mqtt_client);
 	if (mqtt_status != MQTT_STATUS_SUCCESS) {
 		return OPRT_COM_ERROR;
 	}
@@ -524,7 +685,7 @@ int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel,
     }
 
     int buffer_size = sprintf((char*)data_buf,"{\"progress\":\"%d\",\"firmwareType\":%d}", percent, channel);
-	uint16_t msgid = tuya_mqtt_report_data(context, PRO_UPGE_PUSH, data_buf, (uint16_t)buffer_size);
+	uint16_t msgid = tuya_mqtt_protocol_data_publish(context, PRO_UPGE_PUSH, data_buf, (uint16_t)buffer_size);
     system_free(data_buf);
 	if (msgid <= 0) {
     	return OPRT_COM_ERROR;

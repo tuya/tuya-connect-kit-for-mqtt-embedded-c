@@ -6,20 +6,9 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
 #include "cJSON.h"
-
-/**
- * @brief The network buffer must remain valid for the lifetime of the MQTT context.
- */
-#define TUYA_MQTT_BUFFER_SIZE (1024U)
-
-/**
- * @brief Timeout for receiving CONNACK packet in milli seconds.
- */
-#define CONNACK_RECV_TIMEOUT_MS             ( 5000U )
-
+#include "mqtt_client_interface.h"
 
 // data max len
 #define TUYA_MQTT_CLIENTID_MAXLEN (32U)
@@ -30,7 +19,6 @@ extern "C" {
 #define TUYA_MQTT_UUID_MAXLEN (32U)
 #define TUYA_MQTT_TOPIC_MAXLEN (64U)
 #define TUYA_MQTT_TOPIC_MAXLEN (64U)
-
 
 // Tuya mqtt protocol
 #define PRO_DATA_PUSH               4   /* dev -> cloud push dp data */
@@ -73,12 +61,6 @@ extern "C" {
 #define PRO_DEV_ALARM_DOWN    		701 /* cloud -> dev */
 #define PRO_DEV_ALARM_UP      		702 /* dev -> cloud */
 
-
-typedef enum {
-    TUYA_MQTT_EVENT_ERROR = 0,       /*!< This event occurs when there are any errors during execution */
-} tuya_mqtt_event_id_t;
-
-
 typedef struct {
     const char* uuid;
     const char* authkey;
@@ -89,15 +71,19 @@ typedef struct {
 
 typedef struct {
     const uint8_t* cacert;
-    size_t cacert_len;
-    const char* host;
-    uint16_t port;
-    uint32_t timeout;
-    const char* uuid;
-    const char* authkey;
-    const char* devid;
-    const char* seckey;
-    const char* localkey;
+    size_t         cacert_len;
+    const char*    host;
+    uint16_t       port;
+    uint32_t       timeout;
+    const char*    uuid;
+    const char*    authkey;
+    const char*    devid;
+    const char*    seckey;
+    const char*    localkey;
+    void*          user_data;
+    void           (*on_connected)(void* context, void* user_data);
+    void           (*on_disconnect)(void* context, void* user_data);
+    void           (*on_unbind)(void* context, void* user_data);
 } tuya_mqtt_config_t;
 
 typedef struct {
@@ -113,27 +99,43 @@ typedef struct {
     uint16_t event_id;
     cJSON*   data;
     void*    user_data;
-} tuya_mqtt_event_t;
+} tuya_protocol_event_t;
 
-typedef void (*tuya_mqtt_protocol_cb_t)(tuya_mqtt_event_t* ev);
+typedef tuya_protocol_event_t tuya_mqtt_event_t; // compat TODO:remove
 
-typedef struct pv22_protocol_handle {
-    struct pv22_protocol_handle* next;
+typedef void (*tuya_protocol_callback_t)(tuya_protocol_event_t* event);
+
+typedef struct tuya_protocol_handle {
+    struct tuya_protocol_handle* next;
     uint16_t id;
-    tuya_mqtt_protocol_cb_t cb;
+    tuya_protocol_callback_t cb;
     void* user_data;
 } tuya_protocol_handle_t;
 
+typedef void(*mqtt_subscribe_message_cb_t)(uint16_t msgid, const mqtt_client_message_t* msg, void* userdata);
+
+typedef struct mqtt_subscribe_handle {
+	struct mqtt_subscribe_handle* next;
+	char* topic;
+    size_t topic_length;
+	mqtt_subscribe_message_cb_t cb;
+	void* userdata;
+} mqtt_subscribe_handle_t;
+
 typedef struct {
-    void* mqttctx;
+    void* mqtt_client;
     tuya_mqtt_access_t signature;
     tuya_protocol_handle_t* protocol_list;
+    mqtt_subscribe_handle_t* subscribe_list;
     uint32_t sequence_in;
     uint32_t sequence_out;
-    void* user_data;
     bool manual_disconnect;
     bool is_inited;
     bool is_connected;
+    void* user_data;
+    void (*on_connected)(void* context, void* user_data);
+    void (*on_disconnect)(void* context, void* user_data);
+    void (*on_unbind)(void* context, void* user_data);
 } tuya_mqtt_context_t;
 
 
@@ -149,11 +151,17 @@ int tuya_mqtt_destory(tuya_mqtt_context_t* context);
 
 bool tuya_mqtt_connected(tuya_mqtt_context_t* context);
 
-int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb, void* user_data);
+int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_protocol_callback_t cb, void* user_data);
 
-int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_mqtt_protocol_cb_t cb);
+int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_protocol_callback_t cb);
 
-int tuya_mqtt_report_data(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length);
+int tuya_mqtt_protocol_data_publish(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length);
+
+int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, const char* topic, uint16_t protocol_id, uint8_t* data, uint16_t length);
+
+int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context, const char* topic, mqtt_subscribe_message_cb_t cb, void* userdata);
+
+int tuya_mqtt_subscribe_message_callback_unregister(tuya_mqtt_context_t* context, const char* topic);
 
 int tuya_mqtt_upgrade_progress_report(tuya_mqtt_context_t* context, int channel, int percent);
 
