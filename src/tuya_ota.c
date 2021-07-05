@@ -10,6 +10,9 @@
 #include "system_interface.h"
 #include "file_download.h"
 
+#define DEFAULT_DOWNLOAD_TIMEOUT     5000
+#define DEFAULT_DOWNLOAD_RANGESIZE   1024
+
 static void file_download_event_cb(file_download_context_t* ctx, file_download_event_t* event)
 {
     tuya_ota_handle_t* ota_handle = (tuya_ota_handle_t*)ctx->config.user_data;
@@ -79,8 +82,8 @@ int tuya_ota_begin(tuya_ota_handle_t* handle, cJSON* upgrade)
     file_download_init(file_download, &(const file_download_config_t){
         .url = cJSON_GetObjectItem(upgrade, "url")->valuestring,
         .file_size = atol(cJSON_GetObjectItem(upgrade, "size")->valuestring),
-        .timeout_ms = handle->config.timeout_ms,
-        .range_length = handle->config.range_size ? handle->config.range_size:1024,
+        .timeout_ms = handle->config.timeout_ms ? handle->config.timeout_ms:DEFAULT_DOWNLOAD_TIMEOUT,
+        .range_length = handle->config.range_size ? handle->config.range_size:DEFAULT_DOWNLOAD_RANGESIZE,
         .transport = &client->matop,
         .event_handler = file_download_event_cb,
         .user_data = handle,
