@@ -89,6 +89,10 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
         user_upgrade_notify_on(client, event->value.asJSON);
         break;
 
+    case TUYA_EVENT_TIMESTAMP_SYNC:
+        TY_LOGI("Sync timestamp:%d", event->value.asInteger);
+        break;
+
     default:
         break;
     }
@@ -104,7 +108,6 @@ int main(int argc, char** argv)
         .productkey = TUYA_PRODUCT_KEY,
         .uuid = TUYA_DEVICE_UUID,
         .authkey = TUYA_DEVICE_AUTHKEY,
-        .modules = "[{\\\"otaChannel\\\":9,\\\"softVer\\\":\\\"1.0.5\\\"}]",
         .event_handler = user_event_handler_on
     });
 
