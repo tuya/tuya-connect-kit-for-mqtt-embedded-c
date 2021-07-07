@@ -67,6 +67,10 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     offset = sprintf(buffer, "{\"token\":\"%s\",\"softVer\":\"%s\",\"productKey\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\",\"options\": \"%s\"",
                         request->token, request->sw_ver, request->product_key, request->pv, request->bv, "{\\\"isFK\\\":false}");
 
+    if(request->firmware_key && request->firmware_key[0]) {
+        offset += sprintf(buffer + offset,",\"productKeyStr\":\"%s\"", request->firmware_key);
+    }
+
     if(request->devid && strlen(request->devid) > 0) {
         offset += sprintf(buffer + offset,",\"devId\":\"%s\"", request->devid);
     }

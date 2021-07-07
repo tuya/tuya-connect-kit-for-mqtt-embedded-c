@@ -190,6 +190,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
         .sw_ver = client->config.software_ver,
         .modules = client->config.modules,
         .skill_param = client->config.skill_param,
+        .firmware_key = client->config.firmware_key,
         .bv = BS_VERSION,
         .pv = PV_VERSION,
         .buflen_custom = ACTIVATE_BUFFER_LENGTH,
@@ -710,6 +711,8 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
     if (client->is_activated != true) {
         return OPRT_COM_ERROR;
     }
+
+    MultiTimerStop(&client->check_upgrade_timer);
 
     /* Clean client local data */
     local_storage_del((const char*)(client->activate.schemaId));
