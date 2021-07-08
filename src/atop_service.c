@@ -64,11 +64,14 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     /* activate JSON format */
     size_t offset = 0;
 
-    offset = sprintf(buffer, "{\"token\":\"%s\",\"softVer\":\"%s\",\"productKey\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\",\"options\": \"%s\"",
-                        request->token, request->sw_ver, request->product_key, request->pv, request->bv, "{\\\"isFK\\\":false}");
+    offset = sprintf(buffer, "{\"token\":\"%s\",\"softVer\":\"%s\",\"productKey\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\"",
+                        request->token, request->sw_ver, request->product_key, request->pv, request->bv);
 
     if(request->firmware_key && request->firmware_key[0]) {
         offset += sprintf(buffer + offset,",\"productKeyStr\":\"%s\"", request->firmware_key);
+        offset += sprintf(buffer + offset,",\"options\": \"%s\"", "{\\\"isFK\\\":true}");
+    } else {
+        offset += sprintf(buffer + offset,",\"options\": \"%s\"", "{\\\"isFK\\\":false}");
     }
 
     if(request->devid && strlen(request->devid) > 0) {
