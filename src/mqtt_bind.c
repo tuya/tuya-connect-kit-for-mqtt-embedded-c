@@ -16,6 +16,7 @@
 
 typedef enum {
     STATE_MQTT_BIND_START,
+    STATE_MQTT_BIND_CONNECT,
     STATE_MQTT_BIND_COMPLETE,
     STATE_MQTT_BIND_TIMEOUT,
     STATE_MQTT_BIND_FAILED,
@@ -68,35 +69,6 @@ static void mqtt_bind_activate_token_on(tuya_protocol_event_t* ev)
     strcpy(binding->regist_key, regist_key);
 }
 
-static int mqtt_bind_mode_start(tuya_mqtt_context_t* mqctx, const tuya_iot_config_t* config)
-{
-    int rt = OPRT_OK;
-
-    /* mqtt init */
-    const tuya_endpoint_t* endpoint = tuya_endpoint_get();
-    rt = tuya_mqtt_init(mqctx, &(const tuya_mqtt_config_t){
-        .cacert = endpoint->mqtt.cert,
-        .cacert_len =  endpoint->mqtt.cert_len,
-        .host =  endpoint->mqtt.host,
-        .port = endpoint->mqtt.port,
-        .uuid = config->uuid,
-        .authkey = config->authkey,
-        .timeout = MQTT_BIND_NET_TIMEOUT,
-    });
-    if (OPRT_OK != rt) {
-        TY_LOGE("tuya mqtt init error:%d", rt);
-        return rt;
-    }
-
-    rt = tuya_mqtt_start(mqctx);
-    if (OPRT_OK != rt) {
-        TY_LOGE("tuya_mqtt_start error:%d", rt);
-        return rt;
-    }
-
-    return rt;
-}
-
 int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* binding)
 {
     int ret = OPRT_OK;
@@ -104,16 +76,40 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* bi
     tuya_mqtt_context_t mqctx;
 
     while(mqtt_bind_state != STATE_MQTT_BIND_EXIT) {
-
         switch(mqtt_bind_state) {
-        case STATE_MQTT_BIND_START:
-            ret = mqtt_bind_mode_start(&mqctx, config);
-            if (OPRT_OK == ret) {
-                /* register token callback */
-                tuya_mqtt_protocol_register(&mqctx, PRO_MQ_ACTIVE_TOKEN_ON,
-                                        mqtt_bind_activate_token_on, binding);
-                mqtt_bind_state = STATE_MQTT_BIND_CONNECTED_WAIT;
+        case STATE_MQTT_BIND_START: {
+            /* mqtt init */
+            const tuya_endpoint_t* endpoint = tuya_endpoint_get();
+            ret = tuya_mqtt_init(&mqctx, &(const tuya_mqtt_config_t){
+                .cacert = endpoint->mqtt.cert,
+                .cacert_len =  endpoint->mqtt.cert_len,
+                .host =  endpoint->mqtt.host,
+                .port = endpoint->mqtt.port,
+                .uuid = config->uuid,
+                .authkey = config->authkey,
+                .timeout = MQTT_BIND_NET_TIMEOUT,
+            });
+            if (OPRT_OK != ret) {
+                TY_LOGE("tuya mqtt init error:%d", ret);
+                tuya_mqtt_destory(&mqctx);
+                return OPRT_LINK_CORE_MQTT_GET_TOKEN_FAIL;
             }
+
+            /* register token callback */
+            tuya_mqtt_protocol_register(&mqctx, PRO_MQ_ACTIVE_TOKEN_ON,
+                                    mqtt_bind_activate_token_on, binding);
+            mqtt_bind_state = STATE_MQTT_BIND_CONNECT;
+            break;
+        }
+
+        case STATE_MQTT_BIND_CONNECT:
+            ret = tuya_mqtt_start(&mqctx);
+            if (OPRT_OK != ret) {
+                TY_LOGE("tuya_mqtt_start error:%d, retry..", ret);
+                system_sleep(2000);
+                break;
+            }
+            mqtt_bind_state = STATE_MQTT_BIND_CONNECTED_WAIT;
             break;
 
         case STATE_MQTT_BIND_CONNECTED_WAIT:

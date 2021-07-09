@@ -608,24 +608,27 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         client->event.type = TUYA_DATE_TYPE_UNDEFINED;
         iot_dispatch_event(client);
 
-        if (client->token_get(&client->config, client->binding) == OPRT_OK) {
-            TY_LOGI("token: %s", client->binding->token);
-            TY_LOGI("region: %s", client->binding->region);
-            TY_LOGI("regist_key: %s", client->binding->regist_key);
-
-            /* set binding.region, binding.regist_key to tuya dns server */
-            tuya_endpoint_region_regist_set(client->binding->region, client->binding->regist_key);
-            tuya_endpoint_update();
-
-            /* DP event send */
-            client->event.id = TUYA_EVENT_BIND_TOKEN_ON;
-            client->event.type = TUYA_DATE_TYPE_STRING;
-            client->event.value.asString = client->binding->token;
-            iot_dispatch_event(client);
-
-            /* Take token go to activate */
-            client->nextstate = STATE_ACTIVATING;
+        if (client->token_get(&client->config, client->binding) != OPRT_OK) {
+            TY_LOGE("Get token fail, retry..");
+            break;
         }
+
+        TY_LOGI("token: %s", client->binding->token);
+        TY_LOGI("region: %s", client->binding->region);
+        TY_LOGI("regist_key: %s", client->binding->regist_key);
+
+        /* set binding.region, binding.regist_key to tuya dns server */
+        tuya_endpoint_region_regist_set(client->binding->region, client->binding->regist_key);
+        tuya_endpoint_update();
+
+        /* DP event send */
+        client->event.id = TUYA_EVENT_BIND_TOKEN_ON;
+        client->event.type = TUYA_DATE_TYPE_STRING;
+        client->event.value.asString = client->binding->token;
+        iot_dispatch_event(client);
+
+        /* Take token go to activate */
+        client->nextstate = STATE_ACTIVATING;
         break;
 
     case STATE_ACTIVATING:
@@ -712,6 +715,7 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
         return OPRT_COM_ERROR;
     }
 
+    /* Stop check upgrade timer. */
     MultiTimerStop(&client->check_upgrade_timer);
 
     /* Clean client local data */
