@@ -642,9 +642,11 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         client->binding = NULL;
 
         /* Read and parse activate data */
-        if (activated_data_read(client->config.storage_namespace, &client->activate) == OPRT_OK) {
-            client->is_activated = true;
+        if (activated_data_read(client->config.storage_namespace, &client->activate) != OPRT_OK) {
+            client->nextstate = STATE_RESET;
+            break;
         }
+        client->is_activated = true;
 
         /* Retry to load activate */
         client->nextstate = STATE_STARTUP_UPDATE;
