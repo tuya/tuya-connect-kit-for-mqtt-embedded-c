@@ -190,6 +190,7 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
         .sw_ver = client->config.software_ver,
         .modules = client->config.modules,
         .skill_param = client->config.skill_param,
+        .firmware_key = client->config.firmware_key,
         .bv = BS_VERSION,
         .pv = PV_VERSION,
         .buflen_custom = ACTIVATE_BUFFER_LENGTH,
@@ -607,24 +608,27 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         client->event.type = TUYA_DATE_TYPE_UNDEFINED;
         iot_dispatch_event(client);
 
-        if (client->token_get(&client->config, client->binding) == OPRT_OK) {
-            TY_LOGI("token: %s", client->binding->token);
-            TY_LOGI("region: %s", client->binding->region);
-            TY_LOGI("regist_key: %s", client->binding->regist_key);
-
-            /* set binding.region, binding.regist_key to tuya dns server */
-            tuya_endpoint_region_regist_set(client->binding->region, client->binding->regist_key);
-            tuya_endpoint_update();
-
-            /* DP event send */
-            client->event.id = TUYA_EVENT_BIND_TOKEN_ON;
-            client->event.type = TUYA_DATE_TYPE_STRING;
-            client->event.value.asString = client->binding->token;
-            iot_dispatch_event(client);
-
-            /* Take token go to activate */
-            client->nextstate = STATE_ACTIVATING;
+        if (client->token_get(&client->config, client->binding) != OPRT_OK) {
+            TY_LOGE("Get token fail, retry..");
+            break;
         }
+
+        TY_LOGI("token: %s", client->binding->token);
+        TY_LOGI("region: %s", client->binding->region);
+        TY_LOGI("regist_key: %s", client->binding->regist_key);
+
+        /* set binding.region, binding.regist_key to tuya dns server */
+        tuya_endpoint_region_regist_set(client->binding->region, client->binding->regist_key);
+        tuya_endpoint_update();
+
+        /* DP event send */
+        client->event.id = TUYA_EVENT_BIND_TOKEN_ON;
+        client->event.type = TUYA_DATE_TYPE_STRING;
+        client->event.value.asString = client->binding->token;
+        iot_dispatch_event(client);
+
+        /* Take token go to activate */
+        client->nextstate = STATE_ACTIVATING;
         break;
 
     case STATE_ACTIVATING:
@@ -638,9 +642,11 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         client->binding = NULL;
 
         /* Read and parse activate data */
-        if (activated_data_read(client->config.storage_namespace, &client->activate) == OPRT_OK) {
-            client->is_activated = true;
+        if (activated_data_read(client->config.storage_namespace, &client->activate) != OPRT_OK) {
+            client->nextstate = STATE_RESET;
+            break;
         }
+        client->is_activated = true;
 
         /* Retry to load activate */
         client->nextstate = STATE_STARTUP_UPDATE;
@@ -710,6 +716,9 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
     if (client->is_activated != true) {
         return OPRT_COM_ERROR;
     }
+
+    /* Stop check upgrade timer. */
+    MultiTimerStop(&client->check_upgrade_timer);
 
     /* Clean client local data */
     local_storage_del((const char*)(client->activate.schemaId));

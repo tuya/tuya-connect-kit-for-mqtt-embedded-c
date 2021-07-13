@@ -124,6 +124,7 @@ typedef int OPERATE_RET;
 #define OPRT_LINK_CORE_HTTP_RESPONSE_BUFFER_EMPTY          (-0x1e0a)
 #define OPRT_LINK_CORE_HTTP_GW_NOT_EXIST                   (-0x1e0b)
 #define OPRT_LINK_CORE_MQTT_NOT_AUTHORIZED                 (-0x1e0c)
+#define OPRT_LINK_CORE_MQTT_GET_TOKEN_FAIL                 (-0x1e0d)
 #define OPRT_LINK_CORE_ERRCODE_MAX_CNT 12
 
 

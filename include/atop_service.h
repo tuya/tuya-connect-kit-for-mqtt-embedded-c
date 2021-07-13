@@ -11,6 +11,7 @@ extern "C" {
 typedef struct {
     const char* token;
     const char* product_key;
+    const char* firmware_key;
     const char* uuid;
     const char* devid;
     const char* authkey;

@@ -41,7 +41,7 @@ extern "C" {
 #define MAX_LENGTH_SW_VER      10   // max string length of VERSION
 #define MAX_LENGTH_TOKEN       8    // max string length of TOKEN
 
-/* tuya sdk gateway reset type */
+/* tuya link sdk event type */
 typedef enum {
     TUYA_EVENT_RESET,
     TUYA_EVENT_BIND_START,
@@ -124,6 +124,7 @@ typedef struct {
     const char* modules;
     const char* skill_param;
     const char* storage_namespace;
+    const char* firmware_key;
     event_handle_cb_t event_handler;
 } tuya_iot_config_t;
 
