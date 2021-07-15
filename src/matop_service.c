@@ -99,7 +99,7 @@ static int matop_service_file_rawdata_receive_cb(void* context, const uint8_t* i
 
 	if (ilen < sizeof(uint32_t)) {
 		TY_LOGE("error ilen:%d", ilen);
-		return OPRT_COM_ERROR;
+		return;
 	}
 
 #if BYTE_ORDER == LITTLE_ENDIAN
