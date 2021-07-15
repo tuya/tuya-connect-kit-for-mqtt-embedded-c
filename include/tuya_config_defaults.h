@@ -27,22 +27,6 @@
 #endif
 
 /**
- * @brief MQTT buffer size.
- * 
- */
-#ifndef MQTT_BUFFER_SIZE
-    #define MQTT_BUFFER_SIZE (1024U*2)
-#endif
-
-/**
- * @brief Defaults HTTP response timeout.
- * 
- */
-#ifndef DEFAULT_HTTP_TIMEOUT
-    #define DEFAULT_HTTP_TIMEOUT (5000U)
-#endif
-
-/**
  * @brief Defaults auto check upgrade interval.
  * 
  */
