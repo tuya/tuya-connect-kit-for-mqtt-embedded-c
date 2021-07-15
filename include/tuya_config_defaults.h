@@ -23,7 +23,15 @@
  * 
  */
 #ifndef MQTT_KEEPALIVE_INTERVALIN
-    #define MQTT_KEEPALIVE_INTERVALIN (60U)
+    #define MQTT_KEEPALIVE_INTERVALIN (120)
+#endif
+
+/**
+ * @brief MQTT buffer size.
+ * 
+ */
+#ifndef MQTT_BUFFER_SIZE
+    #define MQTT_BUFFER_SIZE (1024U*2)
 #endif
 
 /**
@@ -32,6 +40,14 @@
  */
 #ifndef DEFAULT_HTTP_TIMEOUT
     #define DEFAULT_HTTP_TIMEOUT (5000U)
+#endif
+
+/**
+ * @brief Defaults auto check upgrade interval.
+ * 
+ */
+#ifndef AUTO_UPGRADE_CHECK_INTERVAL
+    #define AUTO_UPGRADE_CHECK_INTERVAL (1000U*60*60*24) // 24 hours
 #endif
 
 #endif /* ifndef TUYA_CONFIG_DEFAULTS_H_ */

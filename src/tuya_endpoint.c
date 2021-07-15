@@ -98,15 +98,15 @@ static int tuya_region_regist_key_write( const char* region, const char* regist_
 
     /* Write kv storage */
     int ret = 0;
-    ret = local_storage_set("region", (const uint8_t*)region, strlen(region) + 1);
+    ret = local_storage_set("region", (const uint8_t*)region, strlen(region));
     if (ret != OPRT_OK) {
-        TY_LOGE("local_storage_set binding.region, error:0x%02x", ret);
+        TY_LOGE("local_storage_set region, error:0x%02x", ret);
         return OPRT_KVS_WR_FAIL;
     }
 
-    ret = local_storage_set("regist_key", (const uint8_t*)regist_key, strlen(regist_key) + 1);
+    ret = local_storage_set("regist_key", (const uint8_t*)regist_key, strlen(regist_key));
     if (ret != OPRT_OK) {
-        TY_LOGE("local_storage_set binding.regist_key, error:0x%02x", ret);
+        TY_LOGE("local_storage_set regist_key, error:0x%02x", ret);
         return OPRT_KVS_WR_FAIL;
     }
 
@@ -123,14 +123,14 @@ static int tuya_region_regist_key_read( char* region, char* regist_key )
     /* Read the region&env from kv storage */
     int ret = 0;
     size_t len = 0;
-    len = MAX_LENGTH_REGION;
+    len = MAX_LENGTH_REGION + 1;
     ret = local_storage_get("region", (uint8_t*)region, &len);
     if (ret != OPRT_OK) {
         TY_LOGE("local_storage_get region fail:0x%02x", ret);
         return OPRT_KVS_RD_FAIL;
     }
 
-    len = MAX_LENGTH_REGIST;
+    len = MAX_LENGTH_REGIST + 1;
     ret = local_storage_get("regist_key", (uint8_t*)regist_key, &len);
     if (ret != OPRT_OK) {
         TY_LOGE("local_storage_get regist_key fail:0x%02x", ret);
@@ -154,8 +154,8 @@ int tuya_endpoint_region_regist_set(const char* region, const char* regist_key)
 
 int tuya_endpoint_remove()
 {
-    local_storage_del("binding.region");
-    local_storage_del("binding.regist_key");
+    local_storage_del("region");
+    local_storage_del("regist_key");
     return OPRT_OK;
 }
 

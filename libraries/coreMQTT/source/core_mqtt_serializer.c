@@ -988,7 +988,10 @@ static MQTTStatus_t deserializeConnack( const MQTTPacketInfo_t * pConnack,
             logConnackResponse( pRemainingData[ 1 ] );
 
             /* A nonzero CONNACK response code means the connection was refused. */
-            if( pRemainingData[ 1 ] > 0U )
+            if( pRemainingData[ 1 ] == 5U ) {
+                status = MQTTNotAuthorized;
+            }
+            else if( pRemainingData[ 1 ] > 0U )
             {
                 status = MQTTServerRefused;
             }

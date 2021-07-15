@@ -15,6 +15,9 @@ set( LINK_SDK_SOURCES
      ${CMAKE_CURRENT_LIST_DIR}/src/tuya_iot.c
      ${CMAKE_CURRENT_LIST_DIR}/src/tuya_endpoint.c
      ${CMAKE_CURRENT_LIST_DIR}/src/iotdns.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/matop_service.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/file_download.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/tuya_ota.c
 )
 
 # Public Include directories.
