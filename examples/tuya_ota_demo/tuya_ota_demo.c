@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
- 
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "tuya_log.h"
 #include "tuya_config.h"
 #include "tuya_iot.h"
@@ -59,17 +63,18 @@ void user_dp_download_on(tuya_iot_client_t* client, const char* json_dps)
 
 void user_ota_event_cb(tuya_ota_handle_t* handle, tuya_ota_event_t* event)
 {
+    static int fd = -1;
     switch (event->id) {
     case TUYA_OTA_EVENT_START:
-
+        fd = open("download_file.bin", O_WRONLY | O_CREAT);
         break;
 
     case TUYA_OTA_EVENT_ON_DATA:
-
+        write(fd, event->data, event->data_len);
         break;
 
     case TUYA_OTA_EVENT_FINISH:
-    
+        close(fd);
         break;
     }
 }
