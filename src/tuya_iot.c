@@ -338,6 +338,9 @@ static void mqtt_client_connected_on(void* context, void* user_data)
         .devid = client->activate.devid
     });
 
+    /* Auto check upgrade timer start */
+    MultiTimerStart(&client->check_upgrade_timer, 1000 * 15);
+
     /* Send connected event*/
     client->event.id = TUYA_EVENT_MQTT_CONNECTED;
     client->event.type = TUYA_DATE_TYPE_UNDEFINED;
@@ -385,9 +388,6 @@ static int run_state_startup_update(tuya_iot_client_t* client)
 
     /* Update client version */
     tuya_iot_version_update_sync(client);
-
-    /* Auto check upgrade timer start */
-    MultiTimerStart(&client->check_upgrade_timer, 1000 * 15);
 
     return rt;
 }
