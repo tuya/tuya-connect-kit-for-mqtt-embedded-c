@@ -30,7 +30,7 @@ typedef enum {
 
 /**
  * @brief Retry requset times config.
- * 
+ *
  */
 #define MAX_DL_RETRY_TIMES  (8u)
 
@@ -150,10 +150,10 @@ int file_download_yield(file_download_context_t* ctx)
     case DL_STATE_FILESIZE_GET:
         if (ctx->file_size == 0) {
             TY_LOGD("start get the file size.");
-            ret = matop_service_file_download_range(ctx->config.transport, 
-                                                    ctx->config.url, 
-                                                    0, 
-                                                    0, 
+            ret = matop_service_file_download_range(ctx->config.transport,
+                                                    ctx->config.url,
+                                                    0,
+                                                    0,
                                                     ctx->config.timeout_ms,
                                                     file_size_result_recv_cb,
                                                     ctx);
@@ -181,10 +181,10 @@ int file_download_yield(file_download_context_t* ctx)
             size_t request_size = (ctx->file_size - ctx->received_size) > ctx->config.range_length?
                                     (ctx->config.range_length) : (ctx->file_size - ctx->received_size);
 
-            ret = matop_service_file_download_range(ctx->config.transport, 
-                                                    ctx->config.url, 
-                                                    ctx->received_size, 
-                                                    ctx->received_size + request_size - 1, 
+            ret = matop_service_file_download_range(ctx->config.transport,
+                                                    ctx->config.url,
+                                                    ctx->received_size,
+                                                    ctx->received_size + request_size - 1,
                                                     ctx->config.timeout_ms,
                                                     file_donwload_data_recv_cb,
                                                     ctx);

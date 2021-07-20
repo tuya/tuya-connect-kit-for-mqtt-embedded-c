@@ -30,8 +30,8 @@ static int matop_service_data_receive_cb(void* context, const uint8_t* input, si
         return OPRT_CJSON_PARSE_ERR;
     }
 
-	if (cJSON_GetObjectItem(root, "id") == NULL || 
-		cJSON_GetObjectItem(root, "id")->type != cJSON_Number || 
+	if (cJSON_GetObjectItem(root, "id") == NULL ||
+		cJSON_GetObjectItem(root, "id")->type != cJSON_Number ||
 		cJSON_GetObjectItem(root, "data") == NULL) {
 		cJSON_Delete(root);
 		return OPRT_CJSON_GET_ERR;
@@ -71,7 +71,7 @@ static int matop_service_data_receive_cb(void* context, const uint8_t* input, si
 		.t = success ? cJSON_GetObjectItem(data, "t")->valueint:0,
 		.user_data = target_message->user_data
 	};
-	
+
 	if(target_message->notify_cb) {
 		target_message->notify_cb(&response, target_message->user_data);
 	}
@@ -89,7 +89,6 @@ static int matop_service_data_receive_cb(void* context, const uint8_t* input, si
 			current = &entry->next;
 		}
 	}
-
 	return 0;
 }
 
@@ -99,7 +98,7 @@ static int matop_service_file_rawdata_receive_cb(void* context, const uint8_t* i
 
 	if (ilen < sizeof(uint32_t)) {
 		TY_LOGE("error ilen:%d", ilen);
-		return;
+		return OPRT_INVALID_PARM;
 	}
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -131,7 +130,7 @@ static int matop_service_file_rawdata_receive_cb(void* context, const uint8_t* i
 		.raw_data_len = ilen - sizeof(uint32_t),
 		.user_data = target_message->user_data,
 	};
-	
+
 	if(target_message->notify_cb) {
 		target_message->notify_cb(&response, target_message->user_data);
 	}
@@ -147,6 +146,7 @@ static int matop_service_file_rawdata_receive_cb(void* context, const uint8_t* i
 			current = &entry->next;
 		}
 	}
+    return 0;
 }
 
 static void on_matop_service_data_receive(uint16_t msgid, const mqtt_client_message_t* msg, void* userdata)
@@ -162,7 +162,7 @@ static void on_matop_service_file_rawdata_receive(uint16_t msgid, const mqtt_cli
 static int matop_request_send(matop_context_t* context, const uint8_t* data, size_t datalen)
 {
 	uint16_t msgid = mqtt_client_publish(context->config.mqctx->mqtt_client, context->resquest_topic, data, datalen, MQTT_QOS_0);
-	
+
 	if (msgid <= 0) {
 		// TODO add error code
 		TY_LOGE("mqtt connect err:%d", msgid);
@@ -225,8 +225,8 @@ int matop_serice_yield(matop_context_t* context)
 	return OPRT_OK;
 }
 
-int matop_service_request_async(matop_context_t* context, 
-								const mqtt_atop_request_t* request, 
+int matop_service_request_async(matop_context_t* context,
+								const mqtt_atop_request_t* request,
 								mqtt_atop_response_cb_t notify_cb,
 								void* user_data)
 {
@@ -251,8 +251,8 @@ int matop_service_request_async(matop_context_t* context,
 
 	/* request buffer make */
     size_t request_datalen = 0;
-    size_t request_bufferlen = strlen(request->data) + 128;
-    uint8_t* request_buffer = system_malloc(request_bufferlen);
+    size_t request_bufferlen = strlen((char*)request->data) + 128;
+    char* request_buffer = system_malloc(request_bufferlen);
     if (request_buffer == NULL) {
         TY_LOGE("response_buffer malloc fail");
 		system_free(message_handle);
@@ -319,15 +319,15 @@ int matop_service_client_reset(matop_context_t* context)
     TY_LOGV("POST JSON:%s", buffer);
 
     /* ATOP service request send */
-	rt = matop_service_request_async(context, 
-								&(const mqtt_atop_request_t){
-									.api = "tuya.device.reset",
-									.version = "4.0",
-									.data = buffer,
-									.data_len = buffer_len,
-								}, 
-								NULL,
-								context);
+	rt = matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "tuya.device.reset",
+            .version = "4.0",
+            .data = (uint8_t*)buffer,
+            .data_len = buffer_len,
+        },
+        NULL,
+        context);
 	system_free(buffer);
     return rt;
 }
@@ -353,15 +353,15 @@ int matop_service_version_update(matop_context_t* context, const char *versions)
     TY_LOGV("POST JSON:%s", buffer);
 
     /* ATOP service request send */
-	rt = matop_service_request_async(context, 
-								&(const mqtt_atop_request_t){
-									.api = "tuya.device.versions.update",
-									.version = "4.1",
-									.data = buffer,
-									.data_len = buffer_len,
-								}, 
-								NULL,
-								context);
+	rt = matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "tuya.device.versions.update",
+            .version = "4.1",
+            .data = (uint8_t*)buffer,
+            .data_len = buffer_len,
+        },
+        NULL,
+        context);
 	system_free(buffer);
     return rt;
 }
@@ -382,25 +382,25 @@ int matop_service_upgrade_status_update(matop_context_t* context, int channel, i
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, MATOP_DEFAULT_BUFFER_LEN, 
+    buffer_len = snprintf(buffer, MATOP_DEFAULT_BUFFER_LEN,
         "{\"type\":%d,\"upgradeStatus\":%d,\"t\":%d}", channel, status, system_timestamp());
     TY_LOGV("POST JSON:%s", buffer);
 
     /* ATOP service request send */
-	rt = matop_service_request_async(context, 
-								&(const mqtt_atop_request_t){
-									.api = "tuya.device.upgrade.status.update",
-									.version = "4.1",
-									.data = buffer,
-									.data_len = buffer_len,
-								}, 
-								NULL,
-								context);
+	rt = matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "tuya.device.upgrade.status.update",
+            .version = "4.1",
+            .data = (uint8_t*)buffer,
+            .data_len = buffer_len,
+        },
+        NULL,
+        context);
 	system_free(buffer);
     return rt;
 }
 
-int matop_service_upgrade_info_get(matop_context_t* context, int channel, 
+int matop_service_upgrade_info_get(matop_context_t* context, int channel,
 									mqtt_atop_response_cb_t notify_cb, void* user_data)
 {
     if (NULL == context) {
@@ -421,21 +421,21 @@ int matop_service_upgrade_info_get(matop_context_t* context, int channel,
     TY_LOGV("POST JSON:%s", buffer);
 
     /* ATOP service request send */
-	rt = matop_service_request_async(context, 
-								&(const mqtt_atop_request_t){
-									.api = "tuya.device.upgrade.get",
-									.version = "4.4",
-									.data = buffer,
-									.data_len = buffer_len,
-									.timeout = 10000
-								}, 
-								notify_cb,
-								user_data);
+	rt = matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "tuya.device.upgrade.get",
+            .version = "4.4",
+            .data = (uint8_t*)buffer,
+            .data_len = buffer_len,
+            .timeout = 10000
+        },
+        notify_cb,
+        user_data);
 	system_free(buffer);
     return rt;
 }
 
-int matop_service_auto_upgrade_info_get(matop_context_t* context, 
+int matop_service_auto_upgrade_info_get(matop_context_t* context,
 										mqtt_atop_response_cb_t notify_cb,
 										void* user_data)
 {
@@ -457,23 +457,23 @@ int matop_service_auto_upgrade_info_get(matop_context_t* context,
     TY_LOGV("POST JSON:%s", buffer);
 
     /* ATOP service request send */
-	rt = matop_service_request_async(context, 
-								&(const mqtt_atop_request_t){
-									.api = "tuya.device.upgrade.silent.get",
-									.version = "4.4",
-									.data = buffer,
-									.data_len = buffer_len,
-								}, 
-								notify_cb,
-								user_data);
+	rt = matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "tuya.device.upgrade.silent.get",
+            .version = "4.4",
+            .data = (uint8_t*)buffer,
+            .data_len = buffer_len,
+        },
+        notify_cb,
+        user_data);
 	system_free(buffer);
     return rt;
 }
 
-int matop_service_file_download_range(matop_context_t* context, 
-										const char* url, 
-										int range_start, 
-										int range_end, 
+int matop_service_file_download_range(matop_context_t* context,
+										const char* url,
+										int range_start,
+										int range_end,
 										uint32_t timeout_ms,
 										mqtt_atop_response_cb_t notify_cb,
 										void* user_data)
@@ -493,22 +493,22 @@ int matop_service_file_download_range(matop_context_t* context,
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, MATOP_DOWNLOAD_BUFFER_LEN, 
-						"{\"url\":\"%s\",\"range\":\"bytes=%d-%d\",\"type\":%d}", 
+    buffer_len = snprintf(buffer, MATOP_DOWNLOAD_BUFFER_LEN,
+						"{\"url\":\"%s\",\"range\":\"bytes=%d-%d\",\"type\":%d}",
 						url, range_start, range_end, (range_start == 0 && range_end == 0) ? 1:2);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* ATOP service request send */
-	rt = matop_service_request_async(context, 
-								&(const mqtt_atop_request_t){
-									.api = "tuya.device.file.download",
-									.version = "1.0",
-									.data = buffer,
-									.data_len = buffer_len,
-									.timeout = timeout_ms
-								}, 
-								notify_cb,
-								user_data);
+	rt = matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "tuya.device.file.download",
+            .version = "1.0",
+            .data = (uint8_t*)buffer,
+            .data_len = buffer_len,
+            .timeout = timeout_ms
+        },
+        notify_cb,
+        user_data);
 	system_free(buffer);
     return rt;
 }
@@ -529,7 +529,7 @@ int matop_service_put_rst_log(matop_context_t* context, int reason)
     }
 
     /* Format rst_info JSON buffer */
-    snprintf(rst_buffer, RST_BUFFER_MAX, 
+    snprintf(rst_buffer, RST_BUFFER_MAX,
         "\"data\":%d", reason);
 
     /* post data */
@@ -542,19 +542,19 @@ int matop_service_put_rst_log(matop_context_t* context, int reason)
         return OPRT_MALLOC_FAILED;
     }
 
-	buffer_len = snprintf(buffer, UPDATE_VERSION_BUFFER_LEN, "{%s,\"t\":%d}", rst_buffer, system_timestamp());    
+	buffer_len = snprintf(buffer, UPDATE_VERSION_BUFFER_LEN, "{%s,\"t\":%d}", rst_buffer, system_timestamp());
     TY_LOGV("POST JSON:%s", buffer);
 
     /* ATOP service request send */
-	rt = matop_service_request_async(context, 
-								&(const mqtt_atop_request_t){
-									.api = "atop.online.debug.log",
-									.version = NULL,
-									.data = buffer,
-									.data_len = buffer_len,
-								}, 
-								NULL,
-								context);
+	rt = matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "atop.online.debug.log",
+            .version = NULL,
+            .data = (uint8_t*)buffer,
+            .data_len = buffer_len,
+        },
+        NULL,
+        context);
 	system_free(buffer);
 	system_free(rst_buffer);
     return rt;
@@ -602,7 +602,7 @@ int matop_service_dynamic_cfg_get(matop_context_t* context,
         &(const mqtt_atop_request_t) {
             .api = "tuya.device.dynamic.config.get",
             .version = "2.0",
-            .data = buffer,
+            .data = (uint8_t*)buffer,
             .data_len = buffer_len,
         },
         notify_cb,
@@ -633,7 +633,6 @@ int matop_service_dynamic_cfg_ack(matop_context_t* context,
     }
 
     memset(buffer, 0, DYNAMIC_CFG_ACK_BUFFER_LEN);
-    uint32_t timestamp = system_timestamp();
     offset = snprintf(buffer, DYNAMIC_CFG_ACK_BUFFER_LEN, "{\"ackList\":[");
 
     if (timezone_ackId) {
@@ -653,7 +652,7 @@ int matop_service_dynamic_cfg_ack(matop_context_t* context,
         &(const mqtt_atop_request_t) {
             .api = "tuya.device.dynamic.config.ack",
             .version = "2.0",
-            .data = buffer,
+            .data = (uint8_t*)buffer,
             .data_len = buffer_len,
         },
         notify_cb,
