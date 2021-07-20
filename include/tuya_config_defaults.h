@@ -11,6 +11,14 @@
 #endif
 
 /**
+ * @brief ACTIVATE_KV_BUFFER_MAX is the maximum length of the buffer
+ * 
+ */
+#ifndef ACTIVATE_KV_BUFFER_MAX
+    #define ACTIVATE_KV_BUFFER_MAX (512U)
+#endif
+
+/**
  * @brief MQTT socket recv blocking time.
  * 
  */
@@ -32,6 +40,27 @@
  */
 #ifndef AUTO_UPGRADE_CHECK_INTERVAL
     #define AUTO_UPGRADE_CHECK_INTERVAL (1000U*60*60*24) // 24 hours
+#endif
+
+/**
+ * @brief The maximum number of retries for connecting to server.
+ */
+#ifndef MQTT_CONNECT_RETRY_MAX_ATTEMPTS
+    #define MQTT_CONNECT_RETRY_MAX_ATTEMPTS (0xffffffff)
+#endif
+
+/**
+ * @brief The maximum back-off delay (in milliseconds) for retrying connection to server.
+ */
+#ifndef MQTT_CONNECT_RETRY_MAX_DELAY_MS
+    #define MQTT_CONNECT_RETRY_MAX_DELAY_MS (8000U)
+#endif
+
+/**
+ * @brief The base back-off delay (in milliseconds) to use for connection retry attempts.
+ */
+#ifndef MQTT_CONNECT_RETRY_MIN_DELAY_MS
+    #define MQTT_CONNECT_RETRY_MIN_DELAY_MS (1000U)
 #endif
 
 #endif /* ifndef TUYA_CONFIG_DEFAULTS_H_ */
