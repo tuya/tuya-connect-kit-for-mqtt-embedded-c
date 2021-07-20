@@ -192,8 +192,8 @@ int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context,
 	mqtt_subscribe_handle_t* target = context->subscribe_list;
 	while (target) {
 		if (!memcmp(target->topic, topic, target->topic_length) && target->cb == cb) {
-			TY_LOGE("Repetition:%s", topic);
-			return OPRT_COM_ERROR;
+			TY_LOGW("Repetition:%s", topic);
+			return OPRT_OK;
 		}
 		target = target->next;
 	}
@@ -454,6 +454,11 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 		return OPRT_COM_ERROR;
     }
 
+	BackoffAlgorithm_InitializeParams(&context->backoff_algorithm,
+									  MQTT_CONNECT_RETRY_MIN_DELAY_MS,
+									  MQTT_CONNECT_RETRY_MAX_DELAY_MS,
+									  MQTT_CONNECT_RETRY_MAX_ATTEMPTS );
+
 	// rand
     context->sequence_out = rand() & 0xffff;
 	context->sequence_in = -1;
@@ -491,6 +496,15 @@ int tuya_mqtt_start(tuya_mqtt_context_t* context)
 
 	if (MQTT_STATUS_SUCCESS != mqtt_status) {
 		TY_LOGE("MQTT connect fail:%d", mqtt_status);
+		/* Generate a random number and get back-off value (in milliseconds) for the next connection retry. */
+		uint16_t nextRetryBackOff = 0U;
+		if( BackoffAlgorithm_GetNextBackoff(&context->backoff_algorithm,\
+			system_random(), &nextRetryBackOff ) == BackoffAlgorithmSuccess ) {
+			TY_LOGW("Connection to the MQTT server failed. Retrying "
+					"connection after %hu ms backoff.",
+					( unsigned short ) nextRetryBackOff );
+			system_sleep(nextRetryBackOff);
+		}
 		return OPRT_COM_ERROR;
 	}
 	return OPRT_OK;
@@ -611,7 +625,7 @@ int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, con
 										  topic,
 										  buffer,
 										  buffer_len,
-										  MQTT_QOS_1);
+										  MQTT_QOS_0);
 	system_free(buffer);
 	return msgid;
 }
@@ -628,23 +642,37 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 	}
 
 	int rt = OPRT_OK;
+	mqtt_client_status_t mqtt_status;
 
 	if (context->is_inited == false ||
 		context-> manual_disconnect == true) {
 		return rt;
 	}
 
+	if (context->is_connected) {
+		mqtt_client_yield(context->mqtt_client);
+		return rt;
+	}
+
 	/* reconnect */
-	if (context->is_connected == false) {
-		if (mqtt_client_connect(context->mqtt_client) == MQTT_STATUS_NOT_AUTHORIZED) {
-			if(context->on_unbind) {
-				context->on_unbind(context, context->user_data);
-			}
+	mqtt_status = mqtt_client_connect(context->mqtt_client);
+	if (mqtt_status == MQTT_STATUS_NOT_AUTHORIZED) {
+		if(context->on_unbind) {
+			context->on_unbind(context, context->user_data);
+		}
+		return rt;
+
+	} else if (mqtt_status != MQTT_STATUS_SUCCESS) {
+		uint16_t nextRetryBackOff = 0U;
+		if( BackoffAlgorithm_GetNextBackoff(&context->backoff_algorithm,\
+			system_random(), &nextRetryBackOff ) == BackoffAlgorithmSuccess ) {
+			TY_LOGW("Connection to the MQTT server failed. Retrying "
+					"connection after %hu ms backoff.",
+					( unsigned short ) nextRetryBackOff );
+			system_sleep(nextRetryBackOff);
 			return rt;
 		}
 	}
-
-	mqtt_client_yield(context->mqtt_client);
 
 	return rt;
 }

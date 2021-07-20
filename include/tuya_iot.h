@@ -155,7 +155,6 @@ struct tuya_iot_client_handle {
     tuya_activate_token_get_t token_get;
     tuya_binding_info_t* binding;
     MultiTimer check_upgrade_timer;
-    uint8_t retry_count;
     uint8_t state;
     uint8_t nextstate;
     bool is_activated;
