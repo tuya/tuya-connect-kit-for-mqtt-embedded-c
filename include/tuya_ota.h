@@ -71,8 +71,6 @@ int tuya_ota_init(tuya_ota_handle_t* handle, const tuya_ota_config_t* config);
 
 int tuya_ota_begin(tuya_ota_handle_t* handle, cJSON* upgrade);
 
-int tuya_ota_update_check(tuya_ota_handle_t* handle);
-
 int tuya_ota_upgrade_status_report(tuya_ota_handle_t* handle, int status);
 
 int tuya_ota_upgrade_progress_report(tuya_ota_handle_t* handle, int percent);

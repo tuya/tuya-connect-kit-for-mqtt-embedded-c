@@ -17,8 +17,6 @@
 #include "cJSON.h"
 #include "MultiTimer.h"
 
-#define ACTIVATE_KV_BUFFER         (255)
-
 typedef enum {
     STATE_IDLE,
     STATE_START,
@@ -81,8 +79,8 @@ static int activate_json_string_parse(const char* str, tuya_activated_data_t* ou
 static int activated_data_read(const char* storage_key, tuya_activated_data_t* out)
 {
     int rt = OPRT_OK;
-    size_t readlen = ACTIVATE_KV_BUFFER;
-    char* readbuf = system_calloc(sizeof(char), ACTIVATE_KV_BUFFER);
+    size_t readlen = ACTIVATE_KV_BUFFER_MAX;
+    char* readbuf = system_calloc(sizeof(char), ACTIVATE_KV_BUFFER_MAX);
     if (NULL == readbuf) {
         TY_LOGE("activate_string malloc fail.");
         return rt;
@@ -338,6 +336,9 @@ static void mqtt_client_connected_on(void* context, void* user_data)
         .devid = client->activate.devid
     });
 
+    /* Auto check upgrade timer start */
+    MultiTimerStart(&client->check_upgrade_timer, 1000 * 15);
+
     /* Send connected event*/
     client->event.id = TUYA_EVENT_MQTT_CONNECTED;
     client->event.type = TUYA_DATE_TYPE_UNDEFINED;
@@ -347,6 +348,10 @@ static void mqtt_client_connected_on(void* context, void* user_data)
 static void mqtt_client_disconnect_on(void* context, void* user_data)
 {
     tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
+
+    /* Stop check upgrade timer. */
+    MultiTimerStop(&client->check_upgrade_timer);
+
     /* Send disconnect event*/
     client->event.id = TUYA_EVENT_MQTT_DISCONNECT;
     client->event.type = TUYA_DATE_TYPE_UNDEFINED;
@@ -386,17 +391,7 @@ static int run_state_startup_update(tuya_iot_client_t* client)
     /* Update client version */
     tuya_iot_version_update_sync(client);
 
-    /* Auto check upgrade timer start */
-    MultiTimerStart(&client->check_upgrade_timer, 1000 * 15);
-
-    return rt;
-}
-
-static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
-{
-    int rt = OPRT_OK;
-
-    /* mqtt init */
+    /* MQTT Client Init */
     const tuya_endpoint_t* endpoint = tuya_endpoint_get();
     rt = tuya_mqtt_init(&client->mqctx, &(const tuya_mqtt_config_t){
         .cacert = endpoint->mqtt.cert,
@@ -412,15 +407,15 @@ static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
         .on_disconnect = mqtt_client_disconnect_on,
         .on_unbind = mqtt_client_unbind_on,
     });
-    if (OPRT_OK != rt) {
-        TY_LOGE("tuya mqtt init error:%d", rt);
-        return rt;
-    }
 
-    rt = tuya_mqtt_start(&client->mqctx);
+    return rt;
+}
+
+static int run_state_mqtt_connect_start(tuya_iot_client_t* client)
+{    
+    int rt = tuya_mqtt_start(&client->mqctx);
     if (OPRT_OK != rt) {
         TY_LOGE("tuya mqtt start error:%d", rt);
-        tuya_mqtt_destory(&client->mqctx);
         return rt;
     }
 
@@ -642,9 +637,11 @@ int tuya_iot_yield(tuya_iot_client_t* client)
         client->binding = NULL;
 
         /* Read and parse activate data */
-        if (activated_data_read(client->config.storage_namespace, &client->activate) == OPRT_OK) {
-            client->is_activated = true;
+        if (activated_data_read(client->config.storage_namespace, &client->activate) != OPRT_OK) {
+            client->nextstate = STATE_RESET;
+            break;
         }
+        client->is_activated = true;
 
         /* Retry to load activate */
         client->nextstate = STATE_STARTUP_UPDATE;
@@ -714,9 +711,6 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
     if (client->is_activated != true) {
         return OPRT_COM_ERROR;
     }
-
-    /* Stop check upgrade timer. */
-    MultiTimerStop(&client->check_upgrade_timer);
 
     /* Clean client local data */
     local_storage_del((const char*)(client->activate.schemaId));
