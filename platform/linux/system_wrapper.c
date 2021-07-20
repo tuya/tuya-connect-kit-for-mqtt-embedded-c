@@ -5,6 +5,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "system_interface.h"
 
@@ -30,26 +31,14 @@ void  system_free(void *ptr)
     free(ptr);
 }
 
-uint32_t system_ticks( void )
+uint32_t system_ticks(void)
 {
-    int64_t timeMs;
-    struct timespec timeSpec;
-
-    /* Get the MONOTONIC time. */
-    ( void ) clock_gettime( CLOCK_MONOTONIC, &timeSpec );
-
-    /* Calculate the milliseconds from timespec. */
-    timeMs = ( timeSpec.tv_sec * MILLISECONDS_PER_SECOND )
-             + ( timeSpec.tv_nsec / NANOSECONDS_PER_MILLISECOND );
-
-    /* Libraries need only the lower 32 bits of the time in milliseconds, since
-     * this function is used only for calculating the time difference.
-     * Also, the possible overflows of this time value are handled by the
-     * libraries. */
-    return ( uint32_t ) timeMs;
+    struct timespec current_time;
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    return (uint32_t)((current_time.tv_sec * 1000) + (current_time.tv_nsec / 1000000));
 }
 
-uint32_t system_timestamp()
+uint32_t system_timestamp(void)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -66,6 +55,11 @@ void system_sleep( uint32_t time_ms )
 
     /* High resolution sleep. */
     ( void ) nanosleep( &sleepTime, NULL );
+}
+
+uint32_t system_random(void)
+{
+    return (uint32_t)rand();
 }
 
 #ifdef __cplusplus

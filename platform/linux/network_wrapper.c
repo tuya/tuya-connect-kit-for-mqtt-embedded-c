@@ -7,12 +7,11 @@ extern "C" {
 #include "log.h"
 #include "tuya_error_code.h"
 #include "network_interface.h"
+#include "system_interface.h"
 
 #include "mbedtls/platform.h"
 #include "mbedtls/net.h"
 #include "mbedtls/ssl.h"
-#include "mbedtls/entropy.h"
-#include "mbedtls/ctr_drbg.h"
 #include "mbedtls/certs.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
@@ -34,8 +33,6 @@ extern "C" {
  * TLS networking layer to create a TLS secured socket.
  */
 struct tls_context {
-	mbedtls_entropy_context entropy;
-	mbedtls_ctr_drbg_context ctr_drbg;
 	mbedtls_ssl_context ssl;
 	mbedtls_ssl_config conf;
 	mbedtls_x509_crt cacert;
@@ -45,25 +42,13 @@ struct tls_context {
 	uint32_t flags;
 };
 
-/*
- * This is a function to do further verification if needed on the cert received
- */
-static int _network_tls_verify_cert(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *flags) {
-	char buf[1024];
-	((void) data);
-
-	log_debug("\nVerify requested for (Depth %d):\n", depth);
-	mbedtls_x509_crt_info(buf, sizeof(buf) - 1, "", crt);
-	log_debug("%s", buf);
-
-	if((*flags) == 0) {
-		log_debug("  This certificate has no flags\n");
-	} else {
-		log_debug(buf, sizeof(buf), "  ! ", *flags);
-		log_debug("%s\n", buf);
-	}
-
-	return 0;
+static int mbedtls_random_port(void *p_rng, unsigned char *output, size_t output_len)
+{
+    int i = 0;
+    for(i=0; i<output_len; i++){
+		output[i] = (unsigned char)(0xff & system_random());
+    }
+    return 0;
 }
 
 int network_tls_init(NetworkContext_t *pNetwork, const TLSConnectParams *params)
@@ -94,7 +79,6 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 {
 	int ret = 0;
 	tls_context_t *tlsDataParams = NULL;
-	const char *pers = "network_tls_wrapper";
 	char portBuffer[6];
 
 	if(NULL == pNetwork) {
@@ -107,21 +91,11 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 
 	tlsDataParams = (tls_context_t*)(pNetwork->context);
 
-	mbedtls_net_init(&(tlsDataParams->server_fd));
 	mbedtls_ssl_init(&(tlsDataParams->ssl));
 	mbedtls_ssl_config_init(&(tlsDataParams->conf));
-	mbedtls_ctr_drbg_init(&(tlsDataParams->ctr_drbg));
 	mbedtls_x509_crt_init(&(tlsDataParams->cacert));
 	mbedtls_x509_crt_init(&(tlsDataParams->clicert));
 	mbedtls_pk_init(&(tlsDataParams->pkey));
-
-	log_debug("Seeding the random number generator...");
-	mbedtls_entropy_init(&(tlsDataParams->entropy));
-	if((ret = mbedtls_ctr_drbg_seed(&(tlsDataParams->ctr_drbg), mbedtls_entropy_func, &(tlsDataParams->entropy),
-									(const unsigned char *) pers, strlen(pers))) != 0) {
-		log_error("failed! mbedtls_ctr_drbg_seed returned -0x%x", -ret);
-		return OPRT_MID_TLS_CTR_DRBG_ENTROPY_SOURCE_ERROR;
-	}
 
 	log_debug("Loading the CA root certificate...");
 	ret = mbedtls_x509_crt_parse(&(tlsDataParams->cacert),
@@ -140,6 +114,7 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 									 pNetwork->tlsConnectParams.client_cert_len);
 		if(ret != 0) {
 			log_error("failed! mbedtls_x509_crt_parse returned -0x%x while parsing device cert", -ret);
+			mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 			return OPRT_MID_TLS_X509_DEVICE_CRT_PARSE_ERROR;
 		}
 		
@@ -148,6 +123,7 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 								    pNetwork->tlsConnectParams.client_key_len, NULL, 0);
 		if(ret != 0) {
 			log_error("failed! mbedtls_pk_parse_key returned -0x%x while parsing private key", -ret);
+			mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 			return OPRT_MID_TLS_PK_PRIVATE_KEY_PARSE_ERROR;
 		}
 		log_debug("ok");
@@ -159,6 +135,7 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 								  pNetwork->tlsConnectParams.host,
 								  portBuffer, MBEDTLS_NET_PROTO_TCP)) != 0) {
 		log_error("failed! mbedtls_net_connect returned -0x%x", -ret);
+		mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 		switch(ret) {
 			case MBEDTLS_ERR_NET_SOCKET_FAILED:
 				return OPRT_MID_TLS_NET_SOCKET_ERROR;
@@ -173,6 +150,7 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 	ret = mbedtls_net_set_block(&(tlsDataParams->server_fd));
 	if(ret != 0) {
 		log_error(" failed\n  ! net_set_(non)block() returned -0x%x\n\n", -ret);
+		mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 		return OPRT_MID_TLS_CONNECTION_ERROR;
 	} log_debug("ok");
 
@@ -183,22 +161,23 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 	if((ret = mbedtls_ssl_config_defaults(&(tlsDataParams->conf), MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM,
 										  MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
 		log_error("failed! mbedtls_ssl_config_defaults returned -0x%x", -ret);
+		mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 		return OPRT_MID_TLS_CONNECTION_ERROR;
 	}
 
-	mbedtls_ssl_conf_verify(&(tlsDataParams->conf), _network_tls_verify_cert, NULL);
 	if(pNetwork->tlsConnectParams.cert_verify == true) {
 		mbedtls_ssl_conf_authmode(&(tlsDataParams->conf), MBEDTLS_SSL_VERIFY_REQUIRED);
 	} else {
 		mbedtls_ssl_conf_authmode(&(tlsDataParams->conf), MBEDTLS_SSL_VERIFY_OPTIONAL);
 	}
-	mbedtls_ssl_conf_rng(&(tlsDataParams->conf), mbedtls_ctr_drbg_random, &(tlsDataParams->ctr_drbg));
+	mbedtls_ssl_conf_rng(&(tlsDataParams->conf), mbedtls_random_port, NULL);
 
 	mbedtls_ssl_conf_ca_chain(&(tlsDataParams->conf), &(tlsDataParams->cacert), NULL);
 
 	if ((pNetwork->tlsConnectParams.client_cert) && (pNetwork->tlsConnectParams.client_key)) {
 		if((ret = mbedtls_ssl_conf_own_cert(&(tlsDataParams->conf), &(tlsDataParams->clicert), &(tlsDataParams->pkey))) !=0) {
 			log_error(" failed! mbedtls_ssl_conf_own_cert returned %d\n\n", ret);
+			mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 			return OPRT_MID_TLS_CONNECTION_ERROR;
 		}
 	}
@@ -206,10 +185,13 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 	/* Assign the resulting configuration to the SSL context. */
 	if((ret = mbedtls_ssl_setup(&(tlsDataParams->ssl), &(tlsDataParams->conf))) != 0) {
 		log_error(" failed! mbedtls_ssl_setup returned -0x%x\n\n", -ret);
+		mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 		return OPRT_MID_TLS_CONNECTION_ERROR;
 	}
+
 	if((ret = mbedtls_ssl_set_hostname(&(tlsDataParams->ssl), pNetwork->tlsConnectParams.host)) != 0) {
 		log_error(" failed! mbedtls_ssl_set_hostname returned %d\n\n", ret);
+		mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 		return OPRT_MID_TLS_CONNECTION_ERROR;
 	}
 
@@ -226,11 +208,16 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 							  "    Alternatively, you may want to use "
 							  "auth_mode=optional for testing purposes.\n");
 			}
+			mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 			return OPRT_MID_TLS_CONNECTION_ERROR;
 		}
 	}
 
-	log_debug(" ok\n    [ Protocol is %s ]\n    [ Ciphersuite is %s ]\n", mbedtls_ssl_get_version(&(tlsDataParams->ssl)),
+	log_debug("TLS handshake complete.");
+	log_debug("Release CA x509 parse.");
+	mbedtls_x509_crt_free(&(tlsDataParams->cacert));
+
+	log_debug("ok\n    [ Protocol is %s ]\n    [ Ciphersuite is %s ]\n", mbedtls_ssl_get_version(&(tlsDataParams->ssl)),
 		  mbedtls_ssl_get_ciphersuite(&(tlsDataParams->ssl)));
 	if((ret = mbedtls_ssl_get_record_expansion(&(tlsDataParams->ssl))) >= 0) {
 		log_debug("    [ Record expansion is %d ]\n", ret);
@@ -238,34 +225,7 @@ int network_tls_connect(NetworkContext_t *pNetwork, const TLSConnectParams *para
 		log_debug("    [ Record expansion is unknown (compression) ]\n");
 	}
 
-	log_debug("  . Verifying peer X.509 certificate...");
-
-	if(pNetwork->tlsConnectParams.cert_verify == true) {
-		if((tlsDataParams->flags = mbedtls_ssl_get_verify_result(&(tlsDataParams->ssl))) != 0) {
-			char vrfy_buf[512];
-			log_error(" failed\n");
-			mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "  ! ", tlsDataParams->flags);
-			log_error("%s\n", vrfy_buf);
-			ret = OPRT_MID_TLS_CONNECTION_ERROR;
-		} else {
-			log_debug(" ok\n");
-			ret = OPRT_OK;
-		}
-	} else {
-		log_debug(" Server Verification skipped\n");
-		ret = OPRT_OK;
-	}
-
-#ifdef ENABLE_IOT_DEBUG
-	unsigned char buf[MBEDTLS_DEBUG_BUFFER_SIZE];
-	if (mbedtls_ssl_get_peer_cert(&(tlsDataParams->ssl)) != NULL) {
-		log_debug("  . Peer certificate information    ...\n");
-		mbedtls_x509_crt_info((char *) buf, sizeof(buf) - 1, "      ", mbedtls_ssl_get_peer_cert(&(tlsDataParams->ssl)));
-		log_debug("%s\n", buf);
-	}
-#endif
-
-	return ret;
+	return OPRT_OK;
 }
 
 int network_tls_disconnect(NetworkContext_t *pNetwork) {
@@ -280,14 +240,10 @@ int network_tls_disconnect(NetworkContext_t *pNetwork) {
 	 * No further action required since this is disconnect call */
 
 	mbedtls_net_free(&(tlsDataParams->server_fd));
-
-	mbedtls_x509_crt_free(&(tlsDataParams->cacert));
 	mbedtls_x509_crt_free(&(tlsDataParams->clicert));
 	mbedtls_pk_free(&(tlsDataParams->pkey));
 	mbedtls_ssl_free(&(tlsDataParams->ssl));
 	mbedtls_ssl_config_free(&(tlsDataParams->conf));
-	mbedtls_ctr_drbg_free(&(tlsDataParams->ctr_drbg));
-	mbedtls_entropy_free(&(tlsDataParams->entropy));
 
 	return OPRT_OK;
 }
