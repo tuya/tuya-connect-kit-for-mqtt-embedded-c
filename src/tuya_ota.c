@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-
+#include <stdlib.h>
 #include "tuya_log.h"
 #include "tuya_iot.h"
 #include "tuya_ota.h"
@@ -58,16 +58,16 @@ static void file_download_event_cb(file_download_context_t* ctx, file_download_e
         event_cb(ota_handle, &ota_handle->event);
         tuya_ota_upgrade_status_report(ota_handle, TUS_UPGRD_FINI);
         break;
+
+    default:
+        break;
     }
 }
 
 int tuya_ota_init(tuya_ota_handle_t* handle, const tuya_ota_config_t* config)
 {
     int ret = OPRT_OK;
-    tuya_iot_client_t* client = handle->config.client;
-
     handle->config = *config;
-    
     return ret;
 }
 
@@ -94,34 +94,6 @@ int tuya_ota_begin(tuya_ota_handle_t* handle, cJSON* upgrade)
     return ret;
 }
 
-int tuya_ota_update_check(tuya_ota_handle_t* handle)
-{
-    int ret = OPRT_OK;
-    tuya_iot_client_t* client = handle->config.client;
-
-    atop_base_response_t response = {0};
-    ret = atop_service_auto_upgrade_info_get_v44(client->activate.devid,
-                                                client->activate.seckey, 
-                                                &response);
-    if (ret != OPRT_OK) {
-        TY_LOGE("auto upgrade check error:%d", ret);
-        atop_base_response_free(&response);
-        return ret;
-    }
-
-    if (response.success != true) {
-        TY_LOGE("auto upgrade check fail");
-        atop_base_response_free(&response);
-        return OPRT_OK;
-    }
-
-    ret = tuya_ota_begin(handle, response.result);
-    
-    atop_base_response_free(&response);
-
-    return ret;
-}
-
 int tuya_ota_upgrade_status_report(tuya_ota_handle_t* handle, int status)
 {
     int ret = OPRT_OK;
@@ -132,7 +104,6 @@ int tuya_ota_upgrade_status_report(tuya_ota_handle_t* handle, int status)
 
 int tuya_ota_upgrade_progress_report(tuya_ota_handle_t* handle, int percent)
 {
-    int ret = OPRT_OK;
     tuya_iot_client_t* client = handle->config.client;
     return tuya_mqtt_upgrade_progress_report(&client->mqctx, handle->channel, percent);
 }

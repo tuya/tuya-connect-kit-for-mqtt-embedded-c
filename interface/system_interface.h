@@ -16,9 +16,11 @@ void  system_free(void *ptr);
 
 uint32_t system_ticks(void);
 
-uint32_t system_timestamp();
+uint32_t system_timestamp(void);
 
 void system_sleep(uint32_t time_ms);
+
+uint32_t system_random(void);
 
 #ifdef __cplusplus
 }

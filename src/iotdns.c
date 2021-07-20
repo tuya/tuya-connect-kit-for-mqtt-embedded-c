@@ -120,8 +120,7 @@ static int iotdns_response_decode(const uint8_t* input, size_t ilen, tuya_endpoi
 
 int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint_t* endport)
 {
-    // TODO 参数校验
-    if (NULL == region || NULL == env) {
+    if (NULL == region || NULL == env || NULL == endport) {
         return OPRT_INVALID_PARM;
     }
 
