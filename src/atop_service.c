@@ -139,7 +139,8 @@ int atop_service_client_reset(const char* id, const char* key)
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, RESET_POST_BUFFER_LEN, "{\"t\":%d}", system_timestamp());
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, RESET_POST_BUFFER_LEN, "{\"t\":%d}", timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -147,7 +148,7 @@ int atop_service_client_reset(const char* id, const char* key)
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.reset",
         .version = "4.0",
         .data = buffer,
@@ -251,7 +252,8 @@ int atop_service_upgrade_info_get_v44(const char* id, const char* key, int chann
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"type\":%d,\"t\":%d}", channel, system_timestamp());
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"type\":%d,\"t\":%d}", channel, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -259,7 +261,7 @@ int atop_service_upgrade_info_get_v44(const char* id, const char* key, int chann
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.upgrade.get",
         .version = "4.4",
         .data = buffer,
@@ -294,7 +296,8 @@ int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"subId\":null,\"t\":%d}", system_timestamp());
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"subId\":null,\"t\":%d}", timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -302,7 +305,7 @@ int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.upgrade.silent.get",
         .version = "4.4",
         .data = buffer,
@@ -337,8 +340,9 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
         return OPRT_MALLOC_FAILED;
     }
 
+    uint32_t timestamp = system_timestamp();
     buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN,
-        "{\"type\":%d,\"upgradeStatus\":%d,\"t\":%d}", channel, status, system_timestamp());
+        "{\"type\":%d,\"upgradeStatus\":%d,\"t\":%d}", channel, status, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -346,7 +350,7 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.upgrade.status.update",
         .version = "4.1",
         .data = buffer,
@@ -392,7 +396,8 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, UPDATE_VERSION_BUFFER_LEN, "{\"versions\":\"%s\",\"t\":%d}", versions, system_timestamp());
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, UPDATE_VERSION_BUFFER_LEN, "{\"versions\":\"%s\",\"t\":%d}", versions, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -400,7 +405,7 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.versions.update",
         .version = "4.1",
         .data = buffer,
