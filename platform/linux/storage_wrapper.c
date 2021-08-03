@@ -23,7 +23,7 @@ int local_storage_set(const char* key, const uint8_t* buffer, size_t length)
     log_debug("key:%s", key);
     fptr = fopen(key, "wb+");
     if (NULL == fptr) {
-        log_error("write to file error");
+        log_error("open file error");
         return OPRT_COM_ERROR;
     } else {
         log_debug("open file OK");
@@ -31,7 +31,7 @@ int local_storage_set(const char* key, const uint8_t* buffer, size_t length)
 
     int file_len = fwrite(buffer, 1, length, fptr);
     fclose(fptr);
-    if (file_len <= 0) {
+    if (file_len != length) {
         log_error("uf_kv_write fail %d", file_len);
         return OPRT_COM_ERROR;
     }
@@ -72,7 +72,7 @@ int local_storage_del(const char* key)
         log_debug("Deleted successfully");
         return OPRT_OK;
     } else {
-        log_error("Unable to delete the file"); 
+        log_error("Unable to delete the file");
         return OPRT_COM_ERROR;
     }
 }
