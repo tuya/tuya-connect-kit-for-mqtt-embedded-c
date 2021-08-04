@@ -35,6 +35,7 @@ typedef enum{
     TUYA_OTA_EVENT_START,
     TUYA_OTA_EVENT_ON_DATA,
     TUYA_OTA_EVENT_FINISH,
+    TUYA_OTA_EVENT_FAULT
 } tuya_ota_event_id_t;
 
 typedef struct {
