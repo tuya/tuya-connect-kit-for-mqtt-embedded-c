@@ -337,7 +337,7 @@ static void mqtt_client_connected_on(void* context, void* user_data)
     });
 
     /* Auto check upgrade timer start */
-    MultiTimerStart(&client->check_upgrade_timer, 1000 * 15);
+    MultiTimerStart(&client->check_upgrade_timer, 1000 * 1);
 
     /* Send connected event*/
     client->event.id = TUYA_EVENT_MQTT_CONNECTED;
