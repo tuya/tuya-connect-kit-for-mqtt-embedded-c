@@ -284,17 +284,17 @@ static void mqtt_atop_upgrade_info_notify_cb(atop_base_response_t* response, voi
 {
     tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
 
-    /* Send timestamp sync event*/
-    client->event.id = TUYA_EVENT_TIMESTAMP_SYNC;
-    client->event.type = TUYA_DATE_TYPE_INTEGER;
-    client->event.value.asInteger = response->t;
-    iot_dispatch_event(client);
-
     /* response error, abort upgrade */
     if (response->success == false) {
         matop_service_upgrade_status_update(&client->matop, 0, 4);
         return;
     }
+
+    /* Send timestamp sync event*/
+    client->event.id = TUYA_EVENT_TIMESTAMP_SYNC;
+    client->event.type = TUYA_DATE_TYPE_INTEGER;
+    client->event.value.asInteger = response->t;
+    iot_dispatch_event(client);
 
     /* Param verify */
     if (response->result == NULL) {
