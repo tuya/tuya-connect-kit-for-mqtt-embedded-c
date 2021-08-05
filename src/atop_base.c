@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include "tuya_config_defaults.h"
 #include "tuya_log.h"
 #include "tuya_endpoint.h"
 #include "system_interface.h"
@@ -264,7 +265,6 @@ static int atop_response_result_parse_cjson(const uint8_t* input, size_t ilen,
 
 int atop_base_request(const atop_base_request_t* request, atop_base_response_t* response)
 {
-    // TODO 参数校验
     if (NULL == request || NULL == response) {
         return OPRT_INVALID_PARM;
     }
@@ -390,6 +390,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
             .headers_count = headers_count,
             .body = body_buffer,
             .body_length = body_length,
+            .timeout_ms = HTTP_TIMEOUT_MS_DEFAULT
         }, 
         &http_response);
 
