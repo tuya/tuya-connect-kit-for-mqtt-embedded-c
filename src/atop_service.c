@@ -64,28 +64,40 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     /* activate JSON format */
     size_t offset = 0;
 
+    /* Requires params */
     offset = sprintf(buffer, "{\"token\":\"%s\",\"softVer\":\"%s\",\"productKey\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\"",
                         request->token, request->sw_ver, request->product_key, request->pv, request->bv);
 
+    /* option params */        
+    offset += sprintf(buffer + offset,",\"options\": \"%s", "{\\\"otaChannel\\\":0");
+    if(request->firmware_key && request->firmware_key[0]) {
+        offset += sprintf(buffer + offset,",\\\"isFK\\\":true");
+    } else {
+        offset += sprintf(buffer + offset,",\\\"isFK\\\":false");
+    }
+    offset += sprintf(buffer + offset,"}\"");
+
+    /* firmware_key */
     if(request->firmware_key && request->firmware_key[0]) {
         offset += sprintf(buffer + offset,",\"productKeyStr\":\"%s\"", request->firmware_key);
-        offset += sprintf(buffer + offset,",\"options\": \"%s\"", "{\\\"isFK\\\":true}");
-    } else {
-        offset += sprintf(buffer + offset,",\"options\": \"%s\"", "{\\\"isFK\\\":false}");
     }
 
+    /* Activated atop */
     if(request->devid && strlen(request->devid) > 0) {
         offset += sprintf(buffer + offset,",\"devId\":\"%s\"", request->devid);
     }
 
+    /* modules */
     if(request->modules && strlen(request->modules) > 0) {
         offset += sprintf(buffer + offset,",\"modules\":\"%s\"", request->modules);
     }
 
+    /* feature */
     if(request->feature && strlen(request->feature) > 0) {
         offset += sprintf(buffer + offset,",\"feature\":\"%s\"", request->feature);
     }
 
+    /* skill_param */
     if(request->skill_param && strlen(request->skill_param) > 0) {
         offset += sprintf(buffer + offset,",\"skillParam\":\"%s\"", request->skill_param);
     }

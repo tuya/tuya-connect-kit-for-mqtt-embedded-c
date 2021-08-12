@@ -206,6 +206,12 @@ static int client_activate_process(tuya_iot_client_t* client, const char* token)
         return rt;
     }
 
+    /* Send timestamp sync event*/
+    client->event.id = TUYA_EVENT_TIMESTAMP_SYNC;
+    client->event.type = TUYA_DATE_TYPE_INTEGER;
+    client->event.value.asInteger = response.t;
+    iot_dispatch_event(client);
+
     /* Parse activate response json data */
     rt = activate_response_parse(&response);
 
