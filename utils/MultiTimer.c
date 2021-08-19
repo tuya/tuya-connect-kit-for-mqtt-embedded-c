@@ -28,6 +28,9 @@ int MultiTimerInstall(PlatformTicksFunction_t ticksFunc)
   */
 int MultiTimerInit(MultiTimer* timer, uint32_t period, MultiTimerCallback_t cb, void* userData)
 {
+    if (!timer || !cb) {
+        return -1;
+    }
     timer->callback = cb;
     timer->userData = userData;
     timer->period = period;
@@ -58,7 +61,6 @@ int MultiTimerStart(MultiTimer* timer, uint32_t startTime)
             break;
         }
     }
-
     return 0;
 }
 
@@ -91,17 +93,15 @@ void MultiTimerYield(void)
 {
     MultiTimer* target;
     for (target = timerList; target; target = target->next) {
-        if (platformTicksFunction() >= target->timeout) {
-            if (target->period == 0) {
-                MultiTimerStop(target);
-            } else {
-                target->timeout = platformTicksFunction() + target->period;
-            }
-            if (target->callback) {
-                target->callback(target, target->userData);
-            }
-        } else {
-            break;
+        if (target->timeout > platformTicksFunction()) {
+            return;
+        }
+        MultiTimerStop(target);
+        if (target->callback) {
+            target->callback(target, target->userData);
+        }
+        if (target->period) {
+            MultiTimerStart(target, target->period);
         }
     }
 }
