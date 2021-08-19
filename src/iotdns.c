@@ -190,6 +190,7 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
 
     /* Decoded response data */
     rt = iotdns_response_decode(http_response.body, http_response.body_length, endport);
+    strcpy(endport->region, region);
     system_free(response_buffer);
     return rt;
 }
