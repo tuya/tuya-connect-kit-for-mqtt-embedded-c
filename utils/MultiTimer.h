@@ -15,7 +15,7 @@ typedef void (*MultiTimerCallback_t)(MultiTimer* timer, void* userData);
 
 struct MultiTimerHandle {
     MultiTimer* next;
-    uint32_t timeout;
+    uint32_t deadline;
     uint32_t period;
     MultiTimerCallback_t callback;
     void* userData;
