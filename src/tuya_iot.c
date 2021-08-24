@@ -732,13 +732,14 @@ int tuya_iot_activated_data_remove(tuya_iot_client_t* client)
     return OPRT_OK;
 }
 
-int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps, const char* time)
+static int tuya_iot_dp_report_json_common(tuya_iot_client_t* client, const char* dps, const char* time, tuya_dp_notify_cb_t cb, void* user_data, int timeout_ms, bool async)
 {
     if (client == NULL || dps == NULL) {
         TY_LOGE("param error");
         return OPRT_INVALID_PARM;
     }
 
+    int ret;
     int printlen = 0;
     char* buffer = NULL;
 
@@ -754,14 +755,27 @@ int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps
     }
 
     /* Report buffer */
-    uint16_t mgsid = tuya_mqtt_protocol_data_publish(&client->mqctx, PRO_DATA_PUSH, (uint8_t*)buffer, printlen);
+    ret = tuya_mqtt_protocol_data_publish_common(&client->mqctx, PRO_DATA_PUSH,
+                                                (const uint8_t*)buffer, (uint16_t)printlen,
+                                                (mqtt_publish_notify_cb_t)cb, user_data,
+                                                timeout_ms, async);
     system_free(buffer);
+    return ret;
+}
 
-    if (mgsid <= 0) {
-        return OPRT_SEND_ERR;
-    }
+int tuya_iot_dp_report_json_async(tuya_iot_client_t* client, const char* dps, const char* time, tuya_dp_notify_cb_t cb, void* user_data, int timeout_ms)
+{
+    return tuya_iot_dp_report_json_common(client, dps, time, cb, user_data, timeout_ms, true);
+}
 
-    return OPRT_OK;
+int tuya_iot_dp_report_json_with_notify(tuya_iot_client_t* client, const char* dps, const char* time, tuya_dp_notify_cb_t cb, void* user_data, int timeout_ms)
+{
+    return tuya_iot_dp_report_json_common(client, dps, time, cb, user_data, timeout_ms, false);
+}
+
+int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps, const char* time)
+{
+    return tuya_iot_dp_report_json_common(client, dps, time, NULL, NULL, 0, false);
 }
 
 int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps)
