@@ -354,7 +354,7 @@ static void mqtt_client_connected_cb(void* client, void* userdata)
 {
 	client = client;
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
-	TY_LOGD("mqtt client connected!");
+	TY_LOGI("mqtt client connected!");
 
 	tuya_mqtt_subscribe_message_callback_register(context, 
 											      context->signature.topic_in, 
@@ -371,7 +371,7 @@ static void mqtt_client_disconnected_cb(void* client, void* userdata)
 {
 	client = client;
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
-	TY_LOGD("mqtt client disconnected!");
+	TY_LOGI("mqtt client disconnected!");
 	context->is_connected = false;
 	if (context->on_disconnect) {
 		context->on_disconnect(context, context->user_data);

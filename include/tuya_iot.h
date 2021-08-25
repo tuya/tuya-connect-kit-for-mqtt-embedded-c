@@ -254,7 +254,7 @@ int tuya_iot_dp_report_json_async(tuya_iot_client_t* client, const char* dps, co
  * @param timeout_ms - timeout setting uint ms.
  * @return int - OPRT_OK successful or error code.
  */
-int tuya_iot_dp_report_json_with_noitfy(tuya_iot_client_t* client, const char* dps, const char* time, tuya_dp_notify_cb_t cb, void* user_data, int timeout_ms);
+int tuya_iot_dp_report_json_with_notify(tuya_iot_client_t* client, const char* dps, const char* time, tuya_dp_notify_cb_t cb, void* user_data, int timeout_ms);
 
 /**
  * @brief Is Tuya client has been activated?
