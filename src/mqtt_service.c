@@ -322,6 +322,7 @@ static int tuya_protocol_message_parse_process(tuya_mqtt_context_t* context, con
     /* dispatch */
 	tuya_protocol_event_t event;
 	event.event_id = protocol_id;
+	event.root_json = root;
 	event.data = cJSON_GetObjectItem(root, "data");
 
 	/* LOCK */

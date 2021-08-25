@@ -98,6 +98,7 @@ typedef struct {
 
 typedef struct {
     uint16_t event_id;
+    cJSON*   root_json;
     cJSON*   data;
     void*    user_data;
 } tuya_protocol_event_t;

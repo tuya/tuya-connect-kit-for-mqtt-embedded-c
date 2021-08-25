@@ -272,8 +272,8 @@ static void mqtt_service_reset_cmd_on(tuya_protocol_event_t* ev)
     client->event.id = TUYA_EVENT_RESET;
     client->event.type = TUYA_DATE_TYPE_INTEGER;
 
-    if (cJSON_GetObjectItem(data, "type") && \
-        strcmp(cJSON_GetObjectItem(data, "type")->valuestring, "reset_factory") == 0)  {
+    if (cJSON_GetObjectItem(ev->root_json, "type") && \
+        strcmp(cJSON_GetObjectItem(ev->root_json, "type")->valuestring, "reset_factory") == 0)  {
         TY_LOGD("cmd is reset factory, ungister");
         client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_FACTORY;
     } else {
