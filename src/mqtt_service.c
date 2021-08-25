@@ -322,6 +322,7 @@ static int tuya_protocol_message_parse_process(tuya_mqtt_context_t* context, con
     /* dispatch */
 	tuya_protocol_event_t event;
 	event.event_id = protocol_id;
+	event.root_json = root;
 	event.data = cJSON_GetObjectItem(root, "data");
 
 	/* LOCK */
@@ -352,8 +353,9 @@ static void on_subscribe_message_default(uint16_t msgid, const mqtt_client_messa
 /* -------------------------------------------------------------------------- */
 static void mqtt_client_connected_cb(void* client, void* userdata)
 {
+	client = client;
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
-	TY_LOGD("mqtt client connected!");
+	TY_LOGI("mqtt client connected!");
 
 	tuya_mqtt_subscribe_message_callback_register(context, 
 											      context->signature.topic_in, 
@@ -368,8 +370,9 @@ static void mqtt_client_connected_cb(void* client, void* userdata)
 
 static void mqtt_client_disconnected_cb(void* client, void* userdata)
 {
+	client = client;
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
-	TY_LOGD("mqtt client disconnected!");
+	TY_LOGI("mqtt client disconnected!");
 	context->is_connected = false;
 	if (context->on_disconnect) {
 		context->on_disconnect(context, context->user_data);
@@ -378,6 +381,7 @@ static void mqtt_client_disconnected_cb(void* client, void* userdata)
 
 static void mqtt_client_message_cb(void* client, uint16_t msgid, const mqtt_client_message_t* msg, void* userdata)
 {
+	client = client;
 	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
 
 	/* topic filter */
@@ -390,6 +394,28 @@ static void mqtt_client_subscribed_cb(void* client, uint16_t msgid, void* userda
 	client = client;
 	userdata = userdata;
 	TY_LOGD("Subscribe successed ID:%d", msgid);
+}
+
+static void mqtt_client_puback_cb(void* client, uint16_t msgid, void* userdata)
+{
+	client = client;
+	tuya_mqtt_context_t* context = (tuya_mqtt_context_t*)userdata;
+	TY_LOGD("PUBACK ID:%d", msgid);
+
+	/* LOCK */
+	/* publish async process */
+	mqtt_publish_handle_t** next_handle = &context->publish_list;
+    for (; *next_handle; next_handle = &(*next_handle)->next) {
+        mqtt_publish_handle_t* entry = *next_handle;
+		if (msgid == entry->msgid) {
+			entry->cb(OPRT_OK, entry->user_data);
+			*next_handle = entry->next;
+			system_free(entry->payload);
+			system_free(entry);
+			break;
+		}
+    }
+	/* UNLOCK */
 }
 
 /* -------------------------------------------------------------------------- */
@@ -446,6 +472,7 @@ int tuya_mqtt_init(tuya_mqtt_context_t* context, const tuya_mqtt_config_t* confi
 		.on_disconnected = mqtt_client_disconnected_cb,
 		.on_message = mqtt_client_message_cb,
 		.on_subscribed = mqtt_client_subscribed_cb,
+		.on_published = mqtt_client_puback_cb,
 		.userdata = context
 	};
 	mqtt_status = mqtt_client_init(context->mqtt_client, &mqtt_config);
@@ -580,7 +607,63 @@ int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protoco
 	return OPRT_OK;
 }
 
-int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, const char* topic, uint16_t protocol_id, uint8_t* data, uint16_t length)
+int tuya_mqtt_client_publish_common(tuya_mqtt_context_t* context, const char* topic,
+								   const uint8_t* payload, size_t payload_length,
+								   mqtt_publish_notify_cb_t cb, void* user_data, 
+								   int timeout_ms, bool async)
+{
+	if(context == NULL || topic == NULL || payload == NULL || (cb == NULL && async == true)) {
+		return OPRT_INVALID_PARM;
+	}
+
+	if (cb == NULL) {
+		uint16_t msgid = mqtt_client_publish(context->mqtt_client, topic,
+											 payload, payload_length, MQTT_QOS_0);
+		if (msgid <= 0) {
+			return OPRT_COM_ERROR;
+		}
+		return OPRT_OK;
+	}
+
+	mqtt_publish_handle_t* handle = system_malloc(sizeof(mqtt_publish_handle_t));
+	TUYA_CHECK_NULL_RETURN(handle, OPRT_MALLOC_FAILED);
+	handle->next = NULL;
+	handle->msgid = 0;
+	handle->topic = (char*)topic;
+	handle->timeout = system_timestamp() + timeout_ms;
+	handle->cb = cb;
+	handle->user_data = user_data;
+	handle->payload_length = payload_length;
+	handle->payload = system_malloc(payload_length);
+	if (handle->payload == NULL) {
+		return OPRT_MALLOC_FAILED;
+	}
+	memcpy(handle->payload, payload, payload_length);
+
+	if (async == false) {
+		handle->msgid = mqtt_client_publish(context->mqtt_client, handle->topic,
+											handle->payload, handle->payload_length,
+											MQTT_QOS_1);
+	}
+
+	if (context->publish_list == NULL) {
+		context->publish_list = handle;
+		return OPRT_OK;
+	}
+
+	mqtt_publish_handle_t* last = context->publish_list;
+	while (last->next != NULL) {
+		last = last->next;
+	}
+	last->next = handle;
+
+	return OPRT_OK;
+}
+
+int tuya_mqtt_protocol_data_publish_with_topic_common(tuya_mqtt_context_t* context, const char* topic, 
+													  uint16_t protocol_id, const uint8_t* data, uint16_t length,
+													  mqtt_publish_notify_cb_t cb, void* user_data,
+													  int timeout_ms, bool async)
 {
 	if (context == NULL || context->is_inited == false) {
 		return OPRT_INVALID_PARM;
@@ -621,16 +704,32 @@ int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, con
 	}
 
 	/* mqtt client publish */
-	uint16_t msgid = mqtt_client_publish( context->mqtt_client,
-										  topic,
-										  buffer,
-										  buffer_len,
-										  MQTT_QOS_0);
+	ret = tuya_mqtt_client_publish_common(context, (const char*)topic,
+								   		  (const uint8_t*)buffer, buffer_len,
+								   		  cb, user_data, timeout_ms, async);
 	system_free(buffer);
-	return msgid;
+	return ret;
 }
 
-int tuya_mqtt_protocol_data_publish(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length)
+int tuya_mqtt_protocol_data_publish_common(tuya_mqtt_context_t* context, uint16_t protocol_id,
+										   const uint8_t* data, uint16_t length,
+										   mqtt_publish_notify_cb_t cb, void* user_data,
+										   int timeout_ms, bool async)
+{
+	return tuya_mqtt_protocol_data_publish_with_topic_common(context, context->signature.topic_out, 
+															 protocol_id, data, length,
+															 cb, user_data, timeout_ms, async);
+}
+
+int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, const char* topic,
+											   uint16_t protocol_id, const uint8_t* data, uint16_t length)
+{
+	return tuya_mqtt_protocol_data_publish_with_topic_common(context, topic, 
+															 protocol_id, data, length,
+															 NULL, NULL, 0, false);
+}
+
+int tuya_mqtt_protocol_data_publish(tuya_mqtt_context_t* context, uint16_t protocol_id, const uint8_t* data, uint16_t length)
 {
 	return tuya_mqtt_protocol_data_publish_with_topic(context, context->signature.topic_out, protocol_id, data, length);
 }
@@ -649,30 +748,52 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 		return rt;
 	}
 
-	if (context->is_connected) {
-		mqtt_client_yield(context->mqtt_client);
-		return rt;
-	}
-
 	/* reconnect */
-	mqtt_status = mqtt_client_connect(context->mqtt_client);
-	if (mqtt_status == MQTT_STATUS_NOT_AUTHORIZED) {
-		if(context->on_unbind) {
-			context->on_unbind(context, context->user_data);
+	if (context->is_connected == false) {
+		mqtt_status = mqtt_client_connect(context->mqtt_client);
+		if (mqtt_status == MQTT_STATUS_NOT_AUTHORIZED) {
+			if(context->on_unbind) {
+				context->on_unbind(context, context->user_data);
+			}
+			return rt;
+
+		} else if (mqtt_status != MQTT_STATUS_SUCCESS) {
+			uint16_t nextRetryBackOff = 0U;
+			if( BackoffAlgorithm_GetNextBackoff(&context->backoff_algorithm,\
+				system_random(), &nextRetryBackOff ) == BackoffAlgorithmSuccess ) {
+				TY_LOGW("Connection to the MQTT server failed. Retrying "
+						"connection after %hu ms backoff.",
+						( unsigned short ) nextRetryBackOff );
+				system_sleep(nextRetryBackOff);
+				return rt;
+			}
 		}
 		return rt;
-
-	} else if (mqtt_status != MQTT_STATUS_SUCCESS) {
-		uint16_t nextRetryBackOff = 0U;
-		if( BackoffAlgorithm_GetNextBackoff(&context->backoff_algorithm,\
-			system_random(), &nextRetryBackOff ) == BackoffAlgorithmSuccess ) {
-			TY_LOGW("Connection to the MQTT server failed. Retrying "
-					"connection after %hu ms backoff.",
-					( unsigned short ) nextRetryBackOff );
-			system_sleep(nextRetryBackOff);
-			return rt;
-		}
 	}
+
+	/* LOCK */
+	/* publish async process */
+	mqtt_publish_handle_t** next_handle = &context->publish_list;
+    for (; *next_handle; next_handle = &(*next_handle)->next) {
+        mqtt_publish_handle_t* entry = *next_handle;
+
+		if (entry->timeout <= system_timestamp()) {
+			entry->cb(OPRT_TIMEOUT, entry->user_data);
+			*next_handle = entry->next;
+			system_free(entry->payload);
+			system_free(entry);
+			continue;
+		}
+
+		if (entry->msgid <= 0) {
+			entry->msgid = mqtt_client_publish(context->mqtt_client, entry->topic,
+											   entry->payload, entry->payload_length, 1);
+		}
+    }
+	/* UNLOCK */
+
+	/* yield */
+	mqtt_client_yield(context->mqtt_client);
 
 	return rt;
 }

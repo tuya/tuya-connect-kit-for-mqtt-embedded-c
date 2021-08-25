@@ -98,6 +98,7 @@ typedef struct {
 
 typedef struct {
     uint16_t event_id;
+    cJSON*   root_json;
     cJSON*   data;
     void*    user_data;
 } tuya_protocol_event_t;
@@ -123,11 +124,25 @@ typedef struct mqtt_subscribe_handle {
 	void* userdata;
 } mqtt_subscribe_handle_t;
 
+typedef void(*mqtt_publish_notify_cb_t)(int result, void* user_data);
+
+typedef struct mqtt_publish_handle {
+    struct mqtt_publish_handle* next;
+    uint16_t msgid;
+    int timeout;
+    char* topic;
+    uint8_t* payload;
+    size_t payload_length;
+    mqtt_publish_notify_cb_t cb;
+    void* user_data;
+} mqtt_publish_handle_t;
+
 typedef struct {
     void* mqtt_client;
     tuya_mqtt_access_t signature;
     tuya_protocol_handle_t* protocol_list;
     mqtt_subscribe_handle_t* subscribe_list;
+    mqtt_publish_handle_t* publish_list;
     BackoffAlgorithmContext_t backoff_algorithm;
     uint32_t sequence_in;
     uint32_t sequence_out;
@@ -157,9 +172,19 @@ int tuya_mqtt_protocol_register(tuya_mqtt_context_t* context, uint16_t protocol_
 
 int tuya_mqtt_protocol_unregister(tuya_mqtt_context_t* context, uint16_t protocol_id, tuya_protocol_callback_t cb);
 
-int tuya_mqtt_protocol_data_publish(tuya_mqtt_context_t* context, uint16_t protocol_id, uint8_t* data, uint16_t length);
+int tuya_mqtt_protocol_data_publish(tuya_mqtt_context_t* context, uint16_t protocol_id, const uint8_t* data, uint16_t length);
 
-int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, const char* topic, uint16_t protocol_id, uint8_t* data, uint16_t length);
+int tuya_mqtt_protocol_data_publish_with_topic(tuya_mqtt_context_t* context, const char* topic, uint16_t protocol_id, const uint8_t* data, uint16_t length);
+
+int tuya_mqtt_protocol_data_publish_common(tuya_mqtt_context_t* context,
+										   uint16_t protocol_id, const uint8_t* data, uint16_t length,
+										   mqtt_publish_notify_cb_t cb, void* user_data,
+										   int timeout_ms, bool async);
+
+int tuya_mqtt_protocol_data_publish_with_topic_common(tuya_mqtt_context_t* context, const char* topic, 
+										              uint16_t protocol_id, const uint8_t* data, uint16_t length,
+										              mqtt_publish_notify_cb_t cb, void* user_data,
+										              int timeout_ms, bool async);
 
 int tuya_mqtt_subscribe_message_callback_register(tuya_mqtt_context_t* context, const char* topic, mqtt_subscribe_message_cb_t cb, void* userdata);
 

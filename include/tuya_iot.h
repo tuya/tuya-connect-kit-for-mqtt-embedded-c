@@ -95,6 +95,8 @@ typedef enum {
     TUYA_DATE_TYPE_JSON
 } tuya_data_type_t;
 
+typedef void(*tuya_dp_notify_cb_t)(int result, void* user_data);
+
 typedef union {
     char *      asString;
     bool        asBoolean;
@@ -227,6 +229,33 @@ int tuya_iot_dp_report_json(tuya_iot_client_t* client, const char* dps);
  * @return int - OPRT_OK successful or error code.
  */
 int tuya_iot_dp_report_json_with_time(tuya_iot_client_t* client, const char* dps, const char* time);
+
+/**
+ * @brief Async report Tuya data point(DP) services to the cloud, with notify.
+ *
+ * @param client - The Tuya client context.
+ * @param dps - DP JSON format e.g: "{"101":true}".
+ * @param time - time e.g: "{"101":1612324744}" or NULL.
+ * @param cb - report result callback, result: OPRT_OK or OPRT_TIMEOUT.
+ * @param user_data - user context data.
+ * @param timeout_ms - timeout setting uint ms.
+ * @return int - OPRT_OK successful or error code.
+ */
+int tuya_iot_dp_report_json_async(tuya_iot_client_t* client, const char* dps, const char* time, tuya_dp_notify_cb_t cb, void* user_data, int timeout_ms);
+
+/**
+ * @brief Report Tuya data point(DP) services to the cloud, with notify.
+ *
+ * @param client - The Tuya client context.
+ * @param dps - DP JSON format e.g: "{"101":true}".
+ * @param time - time e.g: "{"101":1612324744}" or NULL.
+ * @param cb - report result callback, result: OPRT_OK or OPRT_TIMEOUT.
+ * @param user_data - user context data.
+ * @param timeout_ms - timeout setting uint ms.
+ * @return int - OPRT_OK successful or error code.
+ */
+int tuya_iot_dp_report_json_with_notify(tuya_iot_client_t* client, const char* dps, const char* time, tuya_dp_notify_cb_t cb, void* user_data, int timeout_ms);
+
 /**
  * @brief Is Tuya client has been activated?
  *
