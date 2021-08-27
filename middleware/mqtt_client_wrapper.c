@@ -300,7 +300,6 @@ mqtt_client_status_t mqtt_client_yield(void* client)
     if( mqtt_status != MQTTSuccess ) {
         log_error("MQTT_ProcessLoop returned with status = %s.", MQTT_Status_strerror( mqtt_status ));
         mqtt_client_disconnect(context);
-        system_sleep(context->config.timeout_ms);
         return MQTT_STATUS_NETWORK_TIMEOUT;
     }
     return MQTT_STATUS_SUCCESS;

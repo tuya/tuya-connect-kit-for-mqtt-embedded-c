@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "tuya_log.h"
+#include "tuya_config_defaults.h"
 #include "tuya_error_code.h"
 #include "tuya_cloud_types.h"
 #include "system_interface.h"
@@ -245,7 +246,7 @@ int matop_service_request_async(matop_context_t* context,
 	}
 	message_handle->next = NULL;
 	message_handle->id = ++matop->id_cnt;
-	message_handle->timeout = system_ticks() + (request->timeout == 0 ? 5000:request->timeout);
+	message_handle->timeout = system_ticks() + (request->timeout == 0 ? MATOP_TIMEOUT_MS_DEFAULT:request->timeout);
 	message_handle->notify_cb = notify_cb;
 	message_handle->user_data = user_data;
 
