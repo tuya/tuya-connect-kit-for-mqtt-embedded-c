@@ -77,4 +77,11 @@
     #define HTTP_TIMEOUT_MS_DEFAULT (5000U)
 #endif
 
+/**
+ * @brief HTTP TLS timeout config.
+ */
+#ifndef MATOP_TIMEOUT_MS_DEFAULT
+    #define MATOP_TIMEOUT_MS_DEFAULT (8000U)
+#endif
+
 #endif /* ifndef TUYA_CONFIG_DEFAULTS_H_ */
