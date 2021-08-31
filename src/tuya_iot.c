@@ -26,6 +26,7 @@ typedef enum {
     STATE_STARTUP_UPDATE,
     STATE_MQTT_CONNECT_START,
     STATE_MQTT_CONNECTING,
+    STATE_MQTT_RECONNECT,
     STATE_MQTT_YIELD,
     STATE_RESTART,
     STATE_RESET,
@@ -535,6 +536,15 @@ int tuya_iot_stop(tuya_iot_client_t *client)
     return OPRT_OK;
 }
 
+int tuya_iot_reconnect(tuya_iot_client_t *client)
+{
+    if (client->state != STATE_MQTT_YIELD) {
+        return OPRT_COM_ERROR;
+    }
+    client->nextstate = STATE_MQTT_RECONNECT;
+    return OPRT_OK;
+}
+
 int tuya_iot_reset(tuya_iot_client_t *client)
 {
     int ret = OPRT_OK;
@@ -674,6 +684,11 @@ int tuya_iot_yield(tuya_iot_client_t* client)
             TY_LOGI("Tuya MQTT connected.");
             client->nextstate = STATE_MQTT_YIELD;
         }
+        break;
+
+    case STATE_MQTT_RECONNECT:
+        tuya_mqtt_stop(&client->mqctx);
+        client->nextstate = STATE_MQTT_CONNECT_START;
         break;
 
     case STATE_RESTART:
