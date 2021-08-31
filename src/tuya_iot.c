@@ -367,8 +367,10 @@ static void mqtt_client_disconnect_on(void* context, void* user_data)
 
 static void mqtt_client_unbind_on(void* context, void* user_data)
 {
-    tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
     TY_LOGI("MQTT unbind callback.");
+    tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
+    DEV_SYNC_STATUS_E p_status = DEV_STATUS_UNKNOWN;
+    int ret = 0;
 
     /* Reset activated data */
     client->nextstate = STATE_RESET;
@@ -377,6 +379,13 @@ static void mqtt_client_unbind_on(void* context, void* user_data)
     client->event.id = TUYA_EVENT_RESET;
     client->event.type = TUYA_DATE_TYPE_INTEGER;
     client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_UNACTIVE;
+
+    /* Ubind event sync */
+    ret = atop_service_sync_check(client->activate.devid, client->activate.seckey, &p_status);
+    if (ret == OPRT_OK && p_status == DEV_STATUS_RESET_FACTORY) {
+        client->event.value.asInteger = TUYA_RESET_TYPE_REMOTE_FACTORY;
+    }
+
     iot_dispatch_event(client);
 }
 
