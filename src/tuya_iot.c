@@ -287,13 +287,12 @@ static void mqtt_service_reset_cmd_on(tuya_protocol_event_t* ev)
     TY_LOGI("STATE_RESET...");
 }
 
-static void mqtt_atop_upgrade_info_notify_cb(atop_base_response_t* response, void* user_data)
+static void matop_upgrade_info_on(atop_base_response_t* response, void* user_data)
 {
     tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
 
     /* response error, abort upgrade */
     if (response->success == false) {
-        matop_service_upgrade_status_update(&client->matop, 0, 4);
         return;
     }
 
@@ -315,6 +314,18 @@ static void mqtt_atop_upgrade_info_notify_cb(atop_base_response_t* response, voi
     iot_dispatch_event(client);
 }
 
+static void matop_app_notify_upgrade_info_on(atop_base_response_t* response, void* user_data)
+{
+    tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
+
+    /* response error, abort upgrade */
+    if (response->success == false) {
+        matop_service_upgrade_status_update(&client->matop, 0, 4);
+        return;
+    }
+    matop_upgrade_info_on(response, user_data);
+}
+
 static void mqtt_service_upgrade_notify_on(tuya_mqtt_event_t* ev)
 {
     tuya_iot_client_t* client = ev->user_data;
@@ -326,7 +337,7 @@ static void mqtt_service_upgrade_notify_on(tuya_mqtt_event_t* ev)
     }
 
     int rt = matop_service_upgrade_info_get(&client->matop, ota_channel, 
-                                        mqtt_atop_upgrade_info_notify_cb, client);
+                                        matop_app_notify_upgrade_info_on, client);
     if (rt != OPRT_OK) {
         TY_LOGE("upgrade info get error:%d", rt);
         return;
@@ -344,7 +355,9 @@ static void mqtt_client_connected_on(void* context, void* user_data)
     });
 
     /* Auto check upgrade timer start */
-    MultiTimerStart(&client->check_upgrade_timer, 1000 * 1);
+    if (MultiTimerActivated(&client->check_upgrade_timer) == false) {
+        MultiTimerStart(&client->check_upgrade_timer, 1000 * 1);
+    }
 
     /* Send connected event*/
     client->event.id = TUYA_EVENT_MQTT_CONNECTED;
@@ -355,9 +368,6 @@ static void mqtt_client_connected_on(void* context, void* user_data)
 static void mqtt_client_disconnect_on(void* context, void* user_data)
 {
     tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
-
-    /* Stop check upgrade timer. */
-    MultiTimerStop(&client->check_upgrade_timer);
 
     /* Send disconnect event*/
     client->event.id = TUYA_EVENT_MQTT_DISCONNECT;
@@ -393,7 +403,9 @@ static void check_auto_upgrade_timeout_on(MultiTimer* timer, void* user_data)
 {
     tuya_iot_client_t* client = (tuya_iot_client_t*)user_data;
 
-    matop_service_auto_upgrade_info_get(&client->matop, mqtt_atop_upgrade_info_notify_cb, client);
+    if (tuya_mqtt_connected(&client->mqctx)) {
+        matop_service_auto_upgrade_info_get(&client->matop, matop_upgrade_info_on, client);
+    }
 }
 
 /* -------------------------------------------------------------------------- */
