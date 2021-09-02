@@ -2,6 +2,7 @@
 #define _MULTI_TIMER_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus  
 extern "C" {  
@@ -28,6 +29,8 @@ int MultiTimerInit(MultiTimer* timer, uint32_t period, MultiTimerCallback_t cb, 
 int MultiTimerStart(MultiTimer* timer, uint32_t startTime);
 
 int MultiTimerStop(MultiTimer* timer);
+
+bool MultiTimerActivated(MultiTimer* timer);
 
 void MultiTimerYield(void);
 
