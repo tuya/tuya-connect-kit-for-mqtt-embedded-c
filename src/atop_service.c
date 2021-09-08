@@ -614,3 +614,69 @@ int atop_service_iccid_upload(const char* id, const char* key, const char *iccid
 
     return rt;
 }
+
+int atop_service_sync_check(const char* id, const char* key, DEV_SYNC_STATUS_E *p_status)
+{
+    if (NULL == id || NULL == key || NULL == p_status) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+    uint32_t timestamp = system_timestamp();
+
+    /* post data */
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(ATOP_DEFAULT_POST_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"t\":%d}", timestamp);
+    TY_LOGV("POST JSON:%s", buffer);
+
+    /* atop_base_request object construct */
+    atop_base_request_t atop_request = {
+        .devid = id,
+        .key = key,
+        .path = "/d.json",
+        .timestamp = timestamp,
+        .api = "tuya.device.info.sync",
+        .version = "1.0",
+        .data = buffer,
+        .datalen = buffer_len,
+        .user_data = NULL,
+    };
+
+    atop_base_response_t response = {0};
+
+    /* ATOP service request send */
+    rt = atop_base_request(&atop_request, &response);
+    system_free(buffer);
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_base_request error:%d", rt);
+        return rt;
+    }
+
+    cJSON *js_ret = cJSON_GetObjectItem(response.result, "status");
+    if (js_ret != NULL && js_ret->type == cJSON_String) {
+        if (0 == strcmp("reset_factory", js_ret->valuestring)) {
+            *p_status = DEV_STATUS_RESET_FACTORY;
+            TY_LOGI("RESET_FACTORY.");
+        } else if (0 == strcmp("reset", js_ret->valuestring)) {
+            *p_status = DEV_STATUS_RESET;
+            TY_LOGI("RESET.");
+        } else if (0 == strcmp("enable", js_ret->valuestring)) {
+            *p_status = DEV_STATUS_ENABLE;
+            TY_LOGI("ENABLE.");
+        } else {
+            TY_LOGI("INVALID CODE.");
+            rt = OPRT_COM_ERROR;
+        }
+    } else {
+        rt = OPRT_COM_ERROR;
+    }
+
+    atop_base_response_free(&response);
+    return rt;
+}

@@ -100,6 +100,25 @@ int MultiTimerStop(MultiTimer* timer)
 }
 
 /**
+ * @brief MultiTimer is activated?
+ * 
+ * @param timer 
+ * @return true 
+ * @return false 
+ */
+bool MultiTimerActivated(MultiTimer* timer)
+{
+    MultiTimer* entry = timerList;
+    while (entry) {
+        if (entry == timer) {
+            return true;
+        }
+        entry = entry->next;
+    }
+    return false;
+}
+
+/**
   * @brief  main loop.
   * @param  None.
   * @retval None
