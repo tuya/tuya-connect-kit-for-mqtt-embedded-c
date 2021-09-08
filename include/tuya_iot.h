@@ -196,6 +196,14 @@ int tuya_iot_stop(tuya_iot_client_t *client);
 int tuya_iot_reset(tuya_iot_client_t *client);
 
 /**
+ * @brief Reconncet the Tuya mqtt client.
+ *
+ * @param client - The Tuya client context.
+ * @return int - OPRT_OK successful or error code.
+ */
+int tuya_iot_reconnect(tuya_iot_client_t *client);
+
+/**
  * @brief Destroy the Tuya client and release resources.
  *
  * @param client - The Tuya client context.
