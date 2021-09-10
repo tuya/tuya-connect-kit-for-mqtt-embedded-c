@@ -263,7 +263,7 @@ int matop_service_request_async(matop_context_t* context,
 	/* buffer format */
     request_datalen = snprintf(request_buffer, request_bufferlen,
 						"{\"id\":%d,\"a\":\"%s\",\"t\":%d,\"data\":%s",
-						message_handle->id, request->api, system_timestamp(), (char*)request->data);
+						message_handle->id, request->api, system_timestamp(), request->data?((char*)request->data):"{}");
 	if (request->version) {
 		request_datalen += snprintf(request_buffer + request_datalen, request_bufferlen - request_datalen,
 									",\"v\":\"%s\"",

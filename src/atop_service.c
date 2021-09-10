@@ -54,6 +54,10 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         prealloc_size += strlen(request->skill_param) + 10;
     }
 
+    if(request->firmware_key) {
+        prealloc_size += strlen(request->firmware_key) + 10;
+    }
+
     char* buffer = system_malloc(prealloc_size);
     if (NULL == buffer) {
         TY_LOGE("post buffer malloc fail");
@@ -69,11 +73,11 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
                         request->token, request->sw_ver, request->product_key, request->pv, request->bv);
 
     /* option params */        
-    offset += sprintf(buffer + offset,",\"options\": \"%s", "{\\\"otaChannel\\\":0");
+    offset += sprintf(buffer + offset,",\"options\": \"%s", "{");
     if(request->firmware_key && request->firmware_key[0]) {
-        offset += sprintf(buffer + offset,",\\\"isFK\\\":true");
+        offset += sprintf(buffer + offset,"\\\"isFK\\\":true");
     } else {
-        offset += sprintf(buffer + offset,",\\\"isFK\\\":false");
+        offset += sprintf(buffer + offset,"\\\"isFK\\\":false");
     }
     offset += sprintf(buffer + offset,"}\"");
 
