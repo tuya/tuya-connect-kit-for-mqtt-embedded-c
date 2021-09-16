@@ -51,6 +51,8 @@ int atop_service_outdoors_property_upload(const char* id, const char* key, const
 
 int atop_service_iccid_upload(const char* id, const char* key, const char *iccid);
 
+int atop_service_cache_dp_get(const char* id, const char* key,int type, atop_base_response_t* response);
+
 #ifdef __cplusplus
 }
 #endif

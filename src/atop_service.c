@@ -597,3 +597,48 @@ int atop_service_iccid_upload(const char* id, const char* key, const char *iccid
 
     return rt;
 }
+
+int atop_service_cache_dp_get(const char* id, const char* key,
+						int type, atop_base_response_t* response)
+{
+    if (NULL == id || key == NULL || response == NULL) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+    uint32_t timestamp = system_timestamp();
+    /* post data */
+
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(ATOP_DEFAULT_POST_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"devId\":\"%s\",\"dpCacheType\":%d}", id, type);
+    TY_LOGV("POST JSON:%s", buffer);
+
+
+    /* atop_base_request object construct */
+    atop_base_request_t atop_request = {
+        .devid = id,
+        .key = key,
+        .path = "/d.json",
+        .timestamp = timestamp,
+        .api = "tuya.m.device.cache.dp.get",
+        .version = "2.0",
+        .data = buffer,
+        .datalen = buffer_len,
+        .user_data = NULL,
+    };
+
+    /* ATOP service request send */
+    rt = atop_base_request(&atop_request, response);
+    system_free(buffer);
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_base_request error:%d", rt);
+        return rt;
+    }
+    return rt;
+}
