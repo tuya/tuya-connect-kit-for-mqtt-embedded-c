@@ -67,6 +67,48 @@ void user_upgrade_notify_on(tuya_iot_client_t* client, cJSON* upgrade)
     TY_LOGI("HTTPS URL: %s", cJSON_GetObjectItem(upgrade, "httpsUrl")->valuestring);
 }
 
+static void cache_dp_response_parse(atop_base_response_t* response)
+{
+    if (response->success != true || response->result == NULL) {
+        return ;
+    }
+    int iCount=0,i = 0;
+    int ret = OPRT_OK;
+
+    cJSON* result_root = response->result;
+    if (result_root == NULL) {
+        TY_LOGE("response->result is NULL");
+    }
+    cJSON *item = NULL;
+    cJSON *c = result_root->child;
+    TY_LOGI("cache dp=%s\n",cJSON_Print(c));
+    while(c) {
+        item = c;
+        c = c->next;
+        item = cJSON_DetachItemFromObject(result_root, item->string);
+        TY_LOGI("dpid=%s value=%d",item->string,item->valueint);
+        // TODO user prcess the dp cache
+    }
+    return;
+}
+
+
+void user_cache_dp_reuest(tuya_iot_client_t* client)
+{
+
+    atop_base_response_t response = {0};
+    int rt = atop_service_cache_dp_get(client->activate.devid,client->activate.seckey,0,&response);
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_service_cache_dp_get error:%d", rt);
+        return;
+    }
+    /* Parse activate response json data */
+    cache_dp_response_parse(&response);
+
+    /* relese response object */
+    atop_base_response_free(&response);
+}
+
 /* Tuya SDK event callback */
 static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* event)
 {
@@ -78,6 +120,8 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
         break;
 
     case TUYA_EVENT_MQTT_CONNECTED:
+        atop_service_iccid_upload(client->activate.devid,client->activate.seckey,"12345678901234567890");
+        user_cache_dp_reuest(client);
         TY_LOGI("Device MQTT Connected!");
         break;
 
@@ -92,7 +136,8 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
     case TUYA_EVENT_TIMESTAMP_SYNC:
         TY_LOGI("Sync timestamp:%d", event->value.asInteger);
         break;
-
+    case TUYA_EVENT_DPCACHE_NOTIFY:
+        user_cache_dp_reuest(client);
     default:
         break;
     }
