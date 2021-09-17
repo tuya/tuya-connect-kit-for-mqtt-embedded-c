@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "cJSON.h"
+#include "system_interface.h"
 #include "tuya_config.h"
 #include "tuya_iot.h"
 #include "tuya_log.h"
@@ -10,12 +11,19 @@
 #define SOFTWARE_VER "1.0.0"
 #define SWITCH_DP_ID_KEY "1"
 
+
+typedef struct{
+    unsigned char  dp_num;
+    unsigned char  *dp_arr;
+}DP_CACHE_STATE_S;
+
 /* for APP QRCode scan test */
 extern void example_qrcode_print(const char* productkey, const char* uuid);
 
 /* Tuya device handle */
 tuya_iot_client_t client;
 
+static DP_CACHE_STATE_S s_cache_dp;
 /* Hardware switch control function */
 void hardware_switch_set(bool value)
 {
@@ -93,18 +101,77 @@ static void cache_dp_response_parse(atop_base_response_t* response)
 }
 
 
-void user_cache_dp_reuest(tuya_iot_client_t* client)
+static void user_proc_dp_cache_state(cJSON *result)
+{
+    unsigned int arr_sz, i;
+    cJSON *item = NULL, *root = NULL,*temp = NULL; 
+
+
+    if(NULL == result) {
+        TY_LOGE("result  failed ");
+    }
+
+    arr_sz = cJSON_GetArraySize(result);
+    TY_LOGD("arr_sz=%d",arr_sz);
+    for(i = 0; i < arr_sz; i++) {
+        TY_LOGD("***********************************");
+
+        item = cJSON_GetArrayItem(result, i);
+        if (NULL == item) {
+             TY_LOGE("cJSON_GetArrayItem:%d failed", i);
+             continue;
+        }
+        root = cJSON_Parse(item->valuestring);
+        if (NULL == root) {
+            TY_LOGE("cJSON_Parse:%s failed", item->valuestring);
+            continue;
+        }
+        TY_LOGD("item->valuestring:%s ", item->valuestring);
+
+        temp = cJSON_GetObjectItem(root, SWITCH_DP_ID_KEY);
+        if (NULL != temp) {
+            TY_LOGD("temp->valueint:%d ", temp->valueint);
+        }
+        TY_LOGD("***********************************");
+        cJSON_Delete(root);
+    }
+
+    return ;
+}
+
+
+void user_cache_dp_reuest(tuya_iot_client_t* client,DP_CACHE_STATE_S *dp_state)
 {
 
     atop_base_response_t response = {0};
-    int rt = atop_service_cache_dp_get(client->activate.devid,client->activate.seckey,0,&response);
+    if(NULL == dp_state) {
+        return ;
+    }
+    char* out,i;
+
+    TY_LOGI("dp_state->dp_num = %d",dp_state->dp_num);
+ 
+    out = (char*)system_malloc(256);
+    memset(out,0,256);
+    int offset = 0;
+    for (i = 0;i < dp_state->dp_num; i ++) {
+        if (i) {
+            snprintf(out+offset,256,",%d",dp_state->dp_arr[i]);
+        }
+        else {
+            snprintf(out+offset,256,"%d",dp_state->dp_arr[i]);
+        }
+        offset = strlen(out);
+    }
+    TY_LOGI("reqest dp data %s",out);
+    int rt = atop_service_cache_dp_get(client->activate.devid,client->activate.seckey,out,&response);
     if (OPRT_OK != rt) {
         TY_LOGE("atop_service_cache_dp_get error:%d", rt);
         return;
     }
     /* Parse activate response json data */
-    cache_dp_response_parse(&response);
-
+    user_proc_dp_cache_state(response.result);
+    system_free(out);
     /* relese response object */
     atop_base_response_free(&response);
 }
@@ -121,7 +188,7 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
 
     case TUYA_EVENT_MQTT_CONNECTED:
         atop_service_iccid_upload(client->activate.devid,client->activate.seckey,"12345678901234567890");
-        user_cache_dp_reuest(client);
+        user_cache_dp_reuest(client,&s_cache_dp);
         TY_LOGI("Device MQTT Connected!");
         break;
 
@@ -137,16 +204,28 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
         TY_LOGI("Sync timestamp:%d", event->value.asInteger);
         break;
     case TUYA_EVENT_DPCACHE_NOTIFY:
-        user_cache_dp_reuest(client);
+        TY_LOGI("Recv TUYA_EVENT_DPCACHE_NOTIFY");
+        user_cache_dp_reuest(client,&s_cache_dp);
     default:
         break;
     }
 }
 
+static user_dpcache_request_init(void)
+{
+    s_cache_dp.dp_num = 2;
+    s_cache_dp.dp_arr = system_malloc(32);   
+    s_cache_dp.dp_arr[0]=atoi(SWITCH_DP_ID_KEY);    
+}
+
+
 int main(int argc, char** argv)
 {
     int ret = OPRT_OK;
 
+    TY_LOGI("main start 1 s_cache_dp.dp_arr=%p",s_cache_dp.dp_arr);  
+
+    user_dpcache_request_init(); 
     /* Initialize Tuya device configuration */
     ret = tuya_iot_init(&client, &(const tuya_iot_config_t) {
         .software_ver = SOFTWARE_VER,
@@ -157,7 +236,7 @@ int main(int argc, char** argv)
     });
 
     assert(ret == OPRT_OK);
-
+    tuya_endpoint_region_regist_set("AY", "pr_0");
     /* Start tuya iot task */
     tuya_iot_start(&client);
 
