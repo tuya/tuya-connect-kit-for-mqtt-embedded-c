@@ -310,6 +310,7 @@ static void mqtt_atop_upgrade_info_notify_cb(atop_base_response_t* response, voi
 static void mqtt_atop_dp_cache_notify_cb(tuya_protocol_event_t* ev)
 {
     tuya_iot_client_t* client = ev->user_data;
+    TY_LOGE("mqtt_atop_dp_cache_notify_cb");
     client->event.id = TUYA_EVENT_DPCACHE_NOTIFY;
     iot_dispatch_event(client);
 }

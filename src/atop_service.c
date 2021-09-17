@@ -599,7 +599,7 @@ int atop_service_iccid_upload(const char* id, const char* key, const char *iccid
 }
 
 int atop_service_cache_dp_get(const char* id, const char* key,
-						int type, atop_base_response_t* response)
+						const char *req_dps, atop_base_response_t* response)
 {
     if (NULL == id || key == NULL || response == NULL) {
         return OPRT_INVALID_PARM;
@@ -616,7 +616,7 @@ int atop_service_cache_dp_get(const char* id, const char* key,
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"devId\":\"%s\",\"dpCacheType\":%d}", id, type);
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"dps\":[%s],\"t\":%d}",req_dps,timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
 
@@ -626,7 +626,7 @@ int atop_service_cache_dp_get(const char* id, const char* key,
         .key = key,
         .path = "/d.json",
         .timestamp = timestamp,
-        .api = "tuya.m.device.cache.dp.get",
+        .api = "tuya.device.dev.dp.get",
         .version = "2.0",
         .data = buffer,
         .datalen = buffer_len,
