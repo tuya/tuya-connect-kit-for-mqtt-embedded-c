@@ -14,6 +14,13 @@ tuya_iot_client_t client;
 
 #define SWITCH_DP_ID_KEY "1"
 
+typedef struct{
+    unsigned char  dp_num;
+    unsigned char  *dp_arr;
+}DP_CACHE_STATE_S;
+
+static DP_CACHE_STATE_S s_cache_dp;
+
 void example_qrcode_print(const char* productkey, const char* uuid)
 {
 	TY_LOGI("https://smartapp.tuya.com/s/p?p=%s&uuid=%s&v=2.0", productkey, uuid);
@@ -85,21 +92,81 @@ static void cache_dp_response_parse(atop_base_response_t* response)
 }
 
 
-void user_cache_dp_reuest(tuya_iot_client_t* client)
+static void user_proc_dp_cache_state(cJSON *result)
+{
+    unsigned int arr_sz, i;
+    cJSON *item = NULL, *root = NULL,*temp = NULL; 
+
+
+    if(NULL == result) {
+        TY_LOGE("result  failed ");
+    }
+
+    arr_sz = cJSON_GetArraySize(result);
+    TY_LOGD("arr_sz=%d",arr_sz);
+    for(i = 0; i < arr_sz; i++) {
+        TY_LOGD("***********************************");
+
+        item = cJSON_GetArrayItem(result, i);
+        if (NULL == item) {
+             TY_LOGE("cJSON_GetArrayItem:%d failed", i);
+             continue;
+        }
+        root = cJSON_Parse(item->valuestring);
+        if (NULL == root) {
+            TY_LOGE("cJSON_Parse:%s failed", item->valuestring);
+            continue;
+        }
+        TY_LOGD("item->valuestring:%s ", item->valuestring);
+
+        temp = cJSON_GetObjectItem(root, SWITCH_DP_ID_KEY);
+        if (NULL != temp) {
+            TY_LOGD("temp->valueint:%d ", temp->valueint);
+        }
+        TY_LOGD("***********************************");
+        cJSON_Delete(root);
+    }
+
+    return ;
+}
+
+
+void user_cache_dp_reuest(tuya_iot_client_t* client,DP_CACHE_STATE_S *dp_state)
 {
 
     atop_base_response_t response = {0};
-    int rt = atop_service_cache_dp_get(client->activate.devid,client->activate.seckey,0,&response);
+    if(NULL == dp_state) {
+        return ;
+    }
+    char* out,i;
+
+    TY_LOGI("dp_state->dp_num = %d",dp_state->dp_num);
+ 
+    out = (char*)system_malloc(256);
+    memset(out,0,256);
+    int offset = 0;
+    for (i = 0;i < dp_state->dp_num; i ++) {
+        if (i) {
+            snprintf(out+offset,256,",%d",dp_state->dp_arr[i]);
+        }
+        else {
+            snprintf(out+offset,256,"%d",dp_state->dp_arr[i]);
+        }
+        offset = strlen(out);
+    }
+    TY_LOGI("reqest dp data %s",out);
+    int rt = atop_service_cache_dp_get(client->activate.devid,client->activate.seckey,out,&response);
     if (OPRT_OK != rt) {
         TY_LOGE("atop_service_cache_dp_get error:%d", rt);
         return;
     }
     /* Parse activate response json data */
-    cache_dp_response_parse(&response);
-
+    user_proc_dp_cache_state(response.result);
+    system_free(out);
     /* relese response object */
     atop_base_response_free(&response);
 }
+
 
 /* Tuya SDK event callback */
 static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* event)
@@ -111,7 +178,7 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
 
     case TUYA_EVENT_MQTT_CONNECTED:
         TY_LOGI("Device MQTT Connected!");
-        user_cache_dp_reuest(client);
+        user_cache_dp_reuest(client,&s_cache_dp);
         break;
 
     case TUYA_EVENT_DP_RECEIVE:
@@ -119,7 +186,7 @@ static void user_event_handler_on(tuya_iot_client_t* client, tuya_event_msg_t* e
         break;
     case TUYA_EVENT_DPCACHE_NOTIFY:
         TY_LOGI("Receive the dp cache notify");
-        user_cache_dp_reuest(client);
+        user_cache_dp_reuest(client,&s_cache_dp);
     default:
         break;
     }
