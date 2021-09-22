@@ -43,6 +43,7 @@ extern "C" {
 #define PRO_GW_LINKAGE_UPDATE       49  /* cloud -> dev 场景更新推送 */
 #define PRO_MQ_THINGCONFIG          51  /* 设备免密配网 */
 #define PRO_MQ_LOG_CONFIG           55  /* log config */
+#define PRO_MQ_DPCACHE_NOTIFY       103 /* dp cache notify */
 #define PRO_MQ_EN_GW_ADD_DEV_REQ    200 // gw enable add sub device request
 #define PRO_MQ_EN_GW_ADD_DEV_RESP   201 // gw enable add sub device respond
 #define PRO_DEV_LC_GROUP_OPER       202 /* cloud -> dev */
