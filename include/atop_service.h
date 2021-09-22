@@ -31,6 +31,13 @@ typedef enum {
     HTTP_DYNAMIC_CFG_RATERULE,//rate rule for dp
 } HTTP_DYNAMIC_CFG_TYPE;
 
+typedef enum {
+    DEV_STATUS_UNKNOWN,
+    DEV_STATUS_RESET,
+    DEV_STATUS_RESET_FACTORY,
+    DEV_STATUS_ENABLE,
+} DEV_SYNC_STATUS_E;
+
 int atop_service_activate_request(const tuya_activite_request_t* request, atop_base_response_t* response);
 
 int atop_service_client_reset(const char* id, const char* key);
@@ -52,6 +59,7 @@ int atop_service_outdoors_property_upload(const char* id, const char* key, const
 int atop_service_iccid_upload(const char* id, const char* key, const char *iccid);
 
 int atop_service_cache_dp_get(const char* id, const char* key,const char *req_dps, atop_base_response_t* response);
+int atop_service_sync_check(const char* id, const char* key, DEV_SYNC_STATUS_E *p_status);
 
 #ifdef __cplusplus
 }

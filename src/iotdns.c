@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "tuya_config_defaults.h"
 #include "tuya_endpoint.h"
 #include "tuya_log.h"
 #include "cJSON.h"
@@ -174,6 +175,7 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
             .headers_count = headers_count,
             .body = (const uint8_t*)body_buffer,
             .body_length = body_length,
+            .timeout_ms = HTTP_TIMEOUT_MS_DEFAULT,
         },
         &http_response);
 
@@ -188,6 +190,7 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
 
     /* Decoded response data */
     rt = iotdns_response_decode(http_response.body, http_response.body_length, endport);
+    strcpy(endport->region, region);
     system_free(response_buffer);
     return rt;
 }

@@ -2,9 +2,10 @@ include( ${LIBRARIES_DIR}/mbedtlsFilePaths.cmake )
 
 # Create target for POSIX implementation of reconnect logic.
 add_library( platform_port STATIC
+               "mbedtls_sockets_wrapper.c"
                "network_wrapper.c"
                "system_wrapper.c"
-               "storage_wrapper.c" 
+               "storage_wrapper.c"
                ${MBEDTLS_SOURCE}
                )
 

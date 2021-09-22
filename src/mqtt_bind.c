@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "tuya_config_defaults.h"
 #include "tuya_error_code.h"
 #include "tuya_log.h"
 #include "tuya_iot.h"
@@ -11,8 +12,6 @@
 #include "system_interface.h"
 #include "mqtt_service.h"
 #include "cJSON.h"
-
-#define MQTT_BIND_NET_TIMEOUT         (5000)
 
 typedef enum {
     STATE_MQTT_BIND_START,
@@ -87,7 +86,7 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* bi
                 .port = endpoint->mqtt.port,
                 .uuid = config->uuid,
                 .authkey = config->authkey,
-                .timeout = MQTT_BIND_NET_TIMEOUT,
+                .timeout = MQTT_BIND_TIMEOUT_MS_DEFAULT,
             });
             if (OPRT_OK != ret) {
                 TY_LOGE("tuya mqtt init error:%d", ret);

@@ -2,6 +2,7 @@
 #define __ATOP_BASE_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "cJSON.h"
 
 #ifdef __cplusplus
