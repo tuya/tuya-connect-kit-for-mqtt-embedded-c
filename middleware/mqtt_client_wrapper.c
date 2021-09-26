@@ -104,6 +104,10 @@ mqtt_client_status_t mqtt_client_init(void* client, const mqtt_client_config_t* 
         &(const TLSConnectParams){
             .cacert = context->config.cacert,
             .cacert_len = context->config.cacert_len,
+            .client_cert = NULL,
+            .client_cert_len = 0,
+            .client_key = NULL,
+            .client_key_len = 0,
             .host = context->config.host,
             .port = context->config.port,
             .timeout_ms = context->config.timeout_ms,
@@ -296,7 +300,6 @@ mqtt_client_status_t mqtt_client_yield(void* client)
     if( mqtt_status != MQTTSuccess ) {
         log_error("MQTT_ProcessLoop returned with status = %s.", MQTT_Status_strerror( mqtt_status ));
         mqtt_client_disconnect(context);
-        system_sleep(context->config.timeout_ms);
         return MQTT_STATUS_NETWORK_TIMEOUT;
     }
     return MQTT_STATUS_SUCCESS;

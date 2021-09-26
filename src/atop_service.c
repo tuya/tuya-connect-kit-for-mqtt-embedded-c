@@ -54,6 +54,10 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
         prealloc_size += strlen(request->skill_param) + 10;
     }
 
+    if(request->firmware_key) {
+        prealloc_size += strlen(request->firmware_key) + 10;
+    }
+
     char* buffer = system_malloc(prealloc_size);
     if (NULL == buffer) {
         TY_LOGE("post buffer malloc fail");
@@ -64,28 +68,40 @@ int atop_service_activate_request(const tuya_activite_request_t* request,
     /* activate JSON format */
     size_t offset = 0;
 
+    /* Requires params */
     offset = sprintf(buffer, "{\"token\":\"%s\",\"softVer\":\"%s\",\"productKey\":\"%s\",\"protocolVer\":\"%s\",\"baselineVer\":\"%s\"",
                         request->token, request->sw_ver, request->product_key, request->pv, request->bv);
 
+    /* option params */        
+    offset += sprintf(buffer + offset,",\"options\": \"%s", "{");
+    if(request->firmware_key && request->firmware_key[0]) {
+        offset += sprintf(buffer + offset,"\\\"isFK\\\":true");
+    } else {
+        offset += sprintf(buffer + offset,"\\\"isFK\\\":false");
+    }
+    offset += sprintf(buffer + offset,"}\"");
+
+    /* firmware_key */
     if(request->firmware_key && request->firmware_key[0]) {
         offset += sprintf(buffer + offset,",\"productKeyStr\":\"%s\"", request->firmware_key);
-        offset += sprintf(buffer + offset,",\"options\": \"%s\"", "{\\\"isFK\\\":true}");
-    } else {
-        offset += sprintf(buffer + offset,",\"options\": \"%s\"", "{\\\"isFK\\\":false}");
     }
 
+    /* Activated atop */
     if(request->devid && strlen(request->devid) > 0) {
         offset += sprintf(buffer + offset,",\"devId\":\"%s\"", request->devid);
     }
 
+    /* modules */
     if(request->modules && strlen(request->modules) > 0) {
         offset += sprintf(buffer + offset,",\"modules\":\"%s\"", request->modules);
     }
 
+    /* feature */
     if(request->feature && strlen(request->feature) > 0) {
         offset += sprintf(buffer + offset,",\"feature\":\"%s\"", request->feature);
     }
 
+    /* skill_param */
     if(request->skill_param && strlen(request->skill_param) > 0) {
         offset += sprintf(buffer + offset,",\"skillParam\":\"%s\"", request->skill_param);
     }
@@ -139,7 +155,8 @@ int atop_service_client_reset(const char* id, const char* key)
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, RESET_POST_BUFFER_LEN, "{\"t\":%d}", system_timestamp());
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, RESET_POST_BUFFER_LEN, "{\"t\":%d}", timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -147,7 +164,7 @@ int atop_service_client_reset(const char* id, const char* key)
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.reset",
         .version = "4.0",
         .data = buffer,
@@ -251,7 +268,8 @@ int atop_service_upgrade_info_get_v44(const char* id, const char* key, int chann
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"type\":%d,\"t\":%d}", channel, system_timestamp());
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"type\":%d,\"t\":%d}", channel, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -259,7 +277,7 @@ int atop_service_upgrade_info_get_v44(const char* id, const char* key, int chann
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.upgrade.get",
         .version = "4.4",
         .data = buffer,
@@ -294,7 +312,8 @@ int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"subId\":null,\"t\":%d}", system_timestamp());
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"subId\":null,\"t\":%d}", timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -302,7 +321,7 @@ int atop_service_auto_upgrade_info_get_v44(const char* id, const char* key, atop
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.upgrade.silent.get",
         .version = "4.4",
         .data = buffer,
@@ -337,8 +356,9 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
         return OPRT_MALLOC_FAILED;
     }
 
+    uint32_t timestamp = system_timestamp();
     buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN,
-        "{\"type\":%d,\"upgradeStatus\":%d,\"t\":%d}", channel, status, system_timestamp());
+        "{\"type\":%d,\"upgradeStatus\":%d,\"t\":%d}", channel, status, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -346,7 +366,7 @@ int atop_service_upgrade_status_update_v41(const char* id, const char* key, int 
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.upgrade.status.update",
         .version = "4.1",
         .data = buffer,
@@ -392,7 +412,8 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
         return OPRT_MALLOC_FAILED;
     }
 
-    buffer_len = snprintf(buffer, UPDATE_VERSION_BUFFER_LEN, "{\"versions\":\"%s\",\"t\":%d}", versions, system_timestamp());
+    uint32_t timestamp = system_timestamp();
+    buffer_len = snprintf(buffer, UPDATE_VERSION_BUFFER_LEN, "{\"versions\":\"%s\",\"t\":%d}", versions, timestamp);
     TY_LOGV("POST JSON:%s", buffer);
 
     /* atop_base_request object construct */
@@ -400,7 +421,7 @@ int atop_service_version_update_v41(const char* id, const char* key, const char 
         .devid = id,
         .key = key,
         .path = "/d.json",
-        .timestamp = system_timestamp(),
+        .timestamp = timestamp,
         .api = "tuya.device.versions.update",
         .version = "4.1",
         .data = buffer,
@@ -595,5 +616,71 @@ int atop_service_iccid_upload(const char* id, const char* key, const char *iccid
         return OPRT_COM_ERROR;
     }
 
+    return rt;
+}
+
+int atop_service_sync_check(const char* id, const char* key, DEV_SYNC_STATUS_E *p_status)
+{
+    if (NULL == id || NULL == key || NULL == p_status) {
+        return OPRT_INVALID_PARM;
+    }
+
+    int rt = OPRT_OK;
+    uint32_t timestamp = system_timestamp();
+
+    /* post data */
+    size_t buffer_len = 0;
+    char* buffer = system_malloc(ATOP_DEFAULT_POST_BUFFER_LEN);
+    if (NULL == buffer) {
+        TY_LOGE("post buffer malloc fail");
+        return OPRT_MALLOC_FAILED;
+    }
+
+    buffer_len = snprintf(buffer, ATOP_DEFAULT_POST_BUFFER_LEN, "{\"t\":%d}", timestamp);
+    TY_LOGV("POST JSON:%s", buffer);
+
+    /* atop_base_request object construct */
+    atop_base_request_t atop_request = {
+        .devid = id,
+        .key = key,
+        .path = "/d.json",
+        .timestamp = timestamp,
+        .api = "tuya.device.info.sync",
+        .version = "1.0",
+        .data = buffer,
+        .datalen = buffer_len,
+        .user_data = NULL,
+    };
+
+    atop_base_response_t response = {0};
+
+    /* ATOP service request send */
+    rt = atop_base_request(&atop_request, &response);
+    system_free(buffer);
+    if (OPRT_OK != rt) {
+        TY_LOGE("atop_base_request error:%d", rt);
+        return rt;
+    }
+
+    cJSON *js_ret = cJSON_GetObjectItem(response.result, "status");
+    if (js_ret != NULL && js_ret->type == cJSON_String) {
+        if (0 == strcmp("reset_factory", js_ret->valuestring)) {
+            *p_status = DEV_STATUS_RESET_FACTORY;
+            TY_LOGI("RESET_FACTORY.");
+        } else if (0 == strcmp("reset", js_ret->valuestring)) {
+            *p_status = DEV_STATUS_RESET;
+            TY_LOGI("RESET.");
+        } else if (0 == strcmp("enable", js_ret->valuestring)) {
+            *p_status = DEV_STATUS_ENABLE;
+            TY_LOGI("ENABLE.");
+        } else {
+            TY_LOGI("INVALID CODE.");
+            rt = OPRT_COM_ERROR;
+        }
+    } else {
+        rt = OPRT_COM_ERROR;
+    }
+
+    atop_base_response_free(&response);
     return rt;
 }

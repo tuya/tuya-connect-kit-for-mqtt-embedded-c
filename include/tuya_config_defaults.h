@@ -63,4 +63,25 @@
     #define MQTT_CONNECT_RETRY_MIN_DELAY_MS (1000U)
 #endif
 
+/**
+ * @brief MQTT BIND TLS timeout config.
+ */
+#ifndef MQTT_BIND_TIMEOUT_MS_DEFAULT
+    #define MQTT_BIND_TIMEOUT_MS_DEFAULT (5000U)
+#endif
+
+/**
+ * @brief HTTP TLS timeout config.
+ */
+#ifndef HTTP_TIMEOUT_MS_DEFAULT
+    #define HTTP_TIMEOUT_MS_DEFAULT (5000U)
+#endif
+
+/**
+ * @brief HTTP TLS timeout config.
+ */
+#ifndef MATOP_TIMEOUT_MS_DEFAULT
+    #define MATOP_TIMEOUT_MS_DEFAULT (8000U)
+#endif
+
 #endif /* ifndef TUYA_CONFIG_DEFAULTS_H_ */

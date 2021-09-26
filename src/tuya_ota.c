@@ -59,6 +59,13 @@ static void file_download_event_cb(file_download_context_t* ctx, file_download_e
         tuya_ota_upgrade_status_report(ota_handle, TUS_UPGRD_FINI);
         break;
 
+    case DL_EVENT_FAULT:
+        TY_LOGD("DL_EVENT_FAULT");
+        ota_handle->event.id = TUYA_OTA_EVENT_FAULT;
+        event_cb(ota_handle, &ota_handle->event);
+        tuya_ota_upgrade_status_report(ota_handle, TUS_UPGRD_EXEC);
+        break;
+
     default:
         break;
     }
