@@ -21,3 +21,14 @@ target_link_libraries( link_core
     platform_port
     middleware_implementation
 )
+
+# # Output
+# file(GLOB OUTPUT_INCLUDE ${LINK_SDK_INCLUDE_PUBLIC_DIRS}/*.h)
+# file(GLOB OUTPUT_INCLUDE ${OUTPUT_INCLUDE} ${INTERFACE_DIRS}/*.h)
+# file(GLOB OUTPUT_INTERNAL_INC ${JSON_INCLUDE_PUBLIC_DIRS}/*.h)
+
+# file(COPY ${LINK_SDK_SOURCES} DESTINATION ${PROJECT_SOURCE_DIR}/output/tuya_linksdk_c/src)
+# file(COPY ${JSON_SOURCES} DESTINATION ${PROJECT_SOURCE_DIR}/output/tuya_linksdk_c/src)
+
+# file(COPY ${OUTPUT_INCLUDE} DESTINATION ${PROJECT_SOURCE_DIR}/output/tuya_linksdk_c/include)
+# file(COPY ${OUTPUT_INTERNAL_INC} DESTINATION ${PROJECT_SOURCE_DIR}/output/tuya_linksdk_c/src/internal_inc)

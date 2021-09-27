@@ -1,17 +1,18 @@
-set( DEMO_NAME "tuya_ota_demo" )
+set( DEMO_NAME "data_model_basic_demo" )
 
 # Demo target.
 add_executable(
     ${DEMO_NAME}
         "${DEMO_NAME}.c"
-        "qrencode_print.c"
 )
 
 target_link_libraries(
     ${DEMO_NAME}
     PUBLIC
+        utils_modules
+        platform_port
+        middleware_implementation
         link_core
-        qrencode
 )
 
 target_include_directories(
