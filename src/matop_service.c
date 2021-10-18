@@ -103,7 +103,7 @@ static int matop_service_file_rawdata_receive_cb(void* context, const uint8_t* i
 	}
 
 #if BYTE_ORDER == LITTLE_ENDIAN
-	uint32_t id = DWORD_SWAP(*((uint32_t*)input));
+	uint32_t id = ((input[0]&0xff)<<24) | ((input[1]&0xff)<<16) | ((input[2]&0xff)<<8) | (input[3]&0xff);
 #else
 	uint32_t id = *((uint32_t*)input);
 #endif

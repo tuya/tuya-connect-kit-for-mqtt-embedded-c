@@ -167,7 +167,7 @@ typedef size_t SIZE_T;
     X |= temp_high;\
 }
 
-#if defined(LITTLE_END) && (LITTLE_END==1)
+#if defined(LITTLE_ENDIAN) && (LITTLE_ENDIAN==1)
 #define UNI_NTOHS(X) WORD_SWAP(X)
 #define UNI_HTONS(X) WORD_SWAP(X)
 #define UNI_NTOHL(X) DWORD_SWAP(X)
