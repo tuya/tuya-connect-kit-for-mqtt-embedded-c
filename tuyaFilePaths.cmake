@@ -9,6 +9,7 @@
 # FILE(GLOB LINK_SDK_SOURCES *.c)
 set( LINK_SDK_SOURCES
      ${CMAKE_CURRENT_LIST_DIR}/src/tuyalink_core.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/cipher_wrapper.c
 )
 
 # Public Include directories.
