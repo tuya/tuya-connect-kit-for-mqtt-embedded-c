@@ -10,7 +10,7 @@ add_library( platform_port STATIC
                )
 
 target_include_directories( platform_port
-                              PRIVATE
+                              PUBLIC
                                 ${MBEDTLS_INCLUDE_PUBLIC_DIRS}
                                 ${INTERFACE_DIRS} )
 
