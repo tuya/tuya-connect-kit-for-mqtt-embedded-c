@@ -248,7 +248,7 @@ int matop_service_request_async(matop_context_t* context,
 
 	/* request buffer make */
     size_t request_datalen = 0;
-    size_t request_bufferlen = strlen((char*)request->data) + 128;
+    size_t request_bufferlen = 128 + (request->data ? strlen((char*)request->data) : 0);
     char* request_buffer = system_malloc(request_bufferlen);
     if (request_buffer == NULL) {
         TY_LOGE("response_buffer malloc fail");
@@ -657,4 +657,32 @@ int matop_service_dynamic_cfg_ack(matop_context_t* context,
 
     system_free(buffer);
     return rt;
+}
+
+int matop_service_comm_node_enable(matop_context_t* context, mqtt_atop_response_cb_t notify_cb, void* user_data)
+{
+    /* ATOP service request send */
+	return matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "tuya.device.comm.node.enable",
+            .version = "1.0",
+            .data = NULL,
+            .data_len = 0,
+        },
+        notify_cb,
+        user_data);
+}
+
+int matop_service_comm_node_disable(matop_context_t* context, mqtt_atop_response_cb_t notify_cb, void* user_data)
+{
+    /* ATOP service request send */
+	return matop_service_request_async(context,
+        &(const mqtt_atop_request_t){
+            .api = "tuya.device.comm.node.disable",
+            .version = "1.0",
+            .data = NULL,
+            .data_len = 0,
+        },
+        notify_cb,
+        user_data);
 }
