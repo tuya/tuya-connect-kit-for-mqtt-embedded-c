@@ -86,6 +86,12 @@ int matop_service_dynamic_cfg_ack(matop_context_t* context,
     mqtt_atop_response_cb_t notify_cb,
     void* user_data);
 
+int matop_service_comm_node_enable(matop_context_t* context,
+	mqtt_atop_response_cb_t notify_cb, void* user_data);
+
+int matop_service_comm_node_disable(matop_context_t* context,
+	mqtt_atop_response_cb_t notify_cb, void* user_data);
+
 #ifdef __cplusplus
 }
 #endif
