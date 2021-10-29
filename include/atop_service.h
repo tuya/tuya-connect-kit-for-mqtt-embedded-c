@@ -60,6 +60,10 @@ int atop_service_iccid_upload(const char* id, const char* key, const char *iccid
 
 int atop_service_sync_check(const char* id, const char* key, DEV_SYNC_STATUS_E *p_status);
 
+int atop_service_comm_node_enable(const char* id, const char* key);
+
+int atop_service_comm_node_disable(const char* id, const char* key);
+
 #ifdef __cplusplus
 }
 #endif
