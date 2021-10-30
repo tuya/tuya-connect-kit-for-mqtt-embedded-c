@@ -700,6 +700,11 @@ int tuya_iot_yield(tuya_iot_client_t* client)
     case STATE_STARTUP_UPDATE:
         run_state_startup_update(client);
         client->nextstate = STATE_MQTT_CONNECT_START;
+
+        /* DP event send */
+        client->event.id = TUYA_EVENT_BINDED_NOTIFY;
+        client->event.type = TUYA_DATE_TYPE_UNDEFINED;
+        iot_dispatch_event(client);  
         break;
 
     case STATE_MQTT_CONNECT_START:
