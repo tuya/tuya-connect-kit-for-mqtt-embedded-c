@@ -38,6 +38,8 @@ int tuya_endpoint_remove(void);
 
 int tuya_endpoint_update(void);
 
+int tuya_endpoint_update_auto_region(void);
+
 const tuya_endpoint_t* tuya_endpoint_get(void);
 
 #ifdef __cplusplus

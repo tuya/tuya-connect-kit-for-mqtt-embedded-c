@@ -77,6 +77,9 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* bi
     while(mqtt_bind_state != STATE_MQTT_BIND_EXIT) {
         switch(mqtt_bind_state) {
         case STATE_MQTT_BIND_START: {
+            /* Update region demain */
+            tuya_endpoint_update_auto_region();
+
             /* mqtt init */
             const tuya_endpoint_t* endpoint = tuya_endpoint_get();
             ret = tuya_mqtt_init(&mqctx, &(const tuya_mqtt_config_t){

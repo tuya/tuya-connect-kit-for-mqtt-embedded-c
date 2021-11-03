@@ -10,6 +10,7 @@
 #include "http_client_interface.h"
 
 #define IOTDNS_REQUEST_FMT "{\"config\":[{\"key\":\"httpsSelfUrl\",\"need_ca\":true},{\"key\":\"mqttsSelfUrl\",\"need_ca\":true}],\"region\":\"%s\",\"env\":\"%s\"}"
+#define IOTDNS_REQUEST_FMT_NOREGION "{\"config\":[{\"key\":\"httpsSelfUrl\",\"need_ca\":true},{\"key\":\"mqttsSelfUrl\",\"need_ca\":true}],\"env\":\"%s\"}"
 
 const uint8_t iot_dns_cert_der[] = {
     0x30, 0x82, 0x03, 0x0e, 0x30, 0x82, 0x01, 0xf6, 0x02, 0x09, 0x00, 0xc5, 0x3e, 0x9d, 0xe4, 0xdc,
@@ -121,7 +122,7 @@ static int iotdns_response_decode(const uint8_t* input, size_t ilen, tuya_endpoi
 
 int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint_t* endport)
 {
-    if (NULL == region || NULL == env || NULL == endport) {
+    if (NULL == env || NULL == endport) {
         return OPRT_INVALID_PARM;
     }
 
@@ -136,7 +137,11 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
         return OPRT_MALLOC_FAILED;
     }
 
-    body_length = sprintf(body_buffer, IOTDNS_REQUEST_FMT, region, env);
+    if (region) {        
+        body_length = sprintf(body_buffer, IOTDNS_REQUEST_FMT, region, env);
+    } else {
+        body_length = sprintf(body_buffer, IOTDNS_REQUEST_FMT_NOREGION, env);
+    }
     TY_LOGV("out post data len:%d, data:%s", body_length, body_buffer);
 
     /* HTTP headers */
@@ -170,7 +175,7 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
             .host = "h2.iot-dns.com",
             .port = 443,
             .method = "POST",
-            .path = "/v1/url_config",
+            .path = "/v2/url_config",
             .headers = headers,
             .headers_count = headers_count,
             .body = (const uint8_t*)body_buffer,
@@ -190,7 +195,9 @@ int iotdns_cloud_endpoint_get(const char* region, const char* env, tuya_endpoint
 
     /* Decoded response data */
     rt = iotdns_response_decode(http_response.body, http_response.body_length, endport);
-    strcpy(endport->region, region);
+    if (region) {
+        strcpy(endport->region, region);
+    }
     system_free(response_buffer);
     return rt;
 }

@@ -200,6 +200,11 @@ int tuya_endpoint_init()
     TY_LOGI("endpoint_mgr.region:%s", endpoint_mgr.region);
     TY_LOGI("endpoint_mgr.regist_key:%s", endpoint_mgr.regist_key);
 
+    /* Default online env */
+    if (endpoint_mgr.regist_key[0] == 0) {
+        strcpy(endpoint_mgr.regist_key, "pro");
+    }
+
     /* If iot-dns get fail, try to load default domain */
     ret = default_endpoint_get((const char*)endpoint_mgr.region,
                                (const char*)endpoint_mgr.regist_key,
@@ -221,6 +226,25 @@ int tuya_endpoint_update()
 
     /* Try to get the iot-dns domain data */
     ret = iotdns_cloud_endpoint_get(endpoint_mgr.region,
+                                    endpoint_mgr.regist_key,
+                                    &endpoint_mgr.endpoint);
+    return ret;
+}
+
+int tuya_endpoint_update_auto_region(void)
+{
+    int ret;
+
+    /* If iotdns has already been called,
+     * the allocated certificate memory needs to be released. */
+    if (endpoint_mgr.endpoint.atop.cert != NULL &&
+        endpoint_mgr.endpoint.atop.cert != default_tuya_cacert) {
+        TY_LOGV("Free endpoint already exist cert.");
+        system_free(endpoint_mgr.endpoint.atop.cert);
+    }
+
+    /* Try to get the iot-dns domain data */
+    ret = iotdns_cloud_endpoint_get(NULL,
                                     endpoint_mgr.regist_key,
                                     &endpoint_mgr.endpoint);
     return ret;
