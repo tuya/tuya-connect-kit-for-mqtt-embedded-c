@@ -3,22 +3,24 @@
 #include <string.h>
 #include <assert.h>
 #include "tuya_config_defaults.h"
+#include "tuya_error_code.h"
 #include "tuya_log.h"
 #include "tuya_endpoint.h"
 #include "system_interface.h"
 #include "http_client_interface.h"
 #include "core_json.h"
 #include "cJSON.h"
-#include "aes_inf.h"
 #include "uni_md5.h"
 #include "base64.h"
 #include "atop_base.h"
+#include "cipher_wrapper.h"
 
 #define MD5SUM_LENGTH (16)
 #define POST_DATA_PREFIX (5) // 'data='
 #define MAX_URL_LENGTH (255)
 #define DEFAULT_RESPONSE_BUFFER_LEN (1024)
-#define AES_BLOCK_SIZE (16)
+#define AES_GCM128_NONCE_LEN 12
+#define AES_GCM128_TAG_LEN 16
 
 typedef struct {
     char* key;
@@ -88,32 +90,45 @@ static int atop_request_data_encode(const char* key,
         return OPRT_INVALID_PARM;        
     }
 
+    int ret = 0;
     int printlen = 0;
     int i;
 
-    /* AES data PKCS7 padding */
-    uint8_t padding_value = AES_BLOCK_SIZE - ilen % AES_BLOCK_SIZE;
-    size_t input_buffer_len = ilen + padding_value;
-    uint8_t* input_buffer = system_malloc(input_buffer_len);
-    memcpy(input_buffer, input, ilen);
-    for(i = 0; i < padding_value; i++) {
-        input_buffer[ilen + i] = padding_value;
+    /* Encode buffer */
+    size_t encrypt_olen = 0;
+    size_t buflen = AES_GCM128_NONCE_LEN + ilen + AES_GCM128_TAG_LEN;
+    uint8_t* encrypted_buffer = system_malloc(buflen);
+    if (encrypted_buffer == NULL) {
+        return OPRT_MALLOC_FAILED;
     }
 
-    /* AES128-ECB encode */
-    uint8_t* encrypted_buffer = system_malloc(input_buffer_len);
-    size_t encrypted_len = input_buffer_len;
+    /* Nonce */
+    for(i = 0; i < AES_GCM128_NONCE_LEN; i++) {
+        encrypted_buffer[i] = (uint8_t)system_random();
+    }
 
-    OPERATE_RET ret = aes128_ecb_encode_raw(input_buffer, input_buffer_len, encrypted_buffer, (const uint8_t*)key);
-    system_free(input_buffer);
-    if(ret != OPRT_OK) {
-        system_free(encrypted_buffer);
+    /* AES128-GCM */
+    ret = mbedtls_cipher_auth_encrypt_wrapper(
+        &(const cipher_params_t){
+            .cipher_type = MBEDTLS_CIPHER_AES_128_GCM,
+            .key = key,
+            .key_len = 16,
+            .nonce = encrypted_buffer,
+            .nonce_len = AES_GCM128_NONCE_LEN,
+            .ad = NULL,
+            .ad_len = 0,
+            .data = input,
+            .data_len = ilen},
+        encrypted_buffer + AES_GCM128_NONCE_LEN, &encrypt_olen,
+        encrypted_buffer + AES_GCM128_NONCE_LEN + ilen, AES_GCM128_TAG_LEN);
+    if (ret != OPRT_OK) {
+        TY_LOGE("mbedtls_cipher_auth_encrypt_wrapper:0x%x", ret);
         return ret;
     }
 
     // output the hex data
     printlen = sprintf((char*)output, "%s", "data=");
-    for (i = 0; i < (int)encrypted_len; i++) {
+    for (i = 0; i < (int)buflen; i++) {
         printlen += sprintf((char*)output + printlen, "%02X", (uint8_t)(encrypted_buffer[i]));
     }
 
@@ -123,8 +138,8 @@ static int atop_request_data_encode(const char* key,
 }
 
 static int atop_response_result_decrpyt( const char* key,
-                                            const uint8_t* input, int ilen,
-                                            uint8_t* output, size_t* olen)
+                                         const uint8_t* input, int ilen,
+                                         uint8_t* output, size_t* olen)
 {
     if (key == NULL || input == NULL || ilen == 0 || output == NULL || olen == NULL) {
         return OPRT_INVALID_PARM;        
@@ -132,16 +147,23 @@ static int atop_response_result_decrpyt( const char* key,
 
     int rt = OPRT_OK;
 
-    // AES decrypt
-    rt = aes128_ecb_decode_raw(input, ilen, output, (const uint8_t*)key);
+    rt = mbedtls_cipher_auth_decrypt_wrapper(
+        &(const cipher_params_t){
+            .cipher_type = MBEDTLS_CIPHER_AES_128_GCM,
+            .key = key,
+            .key_len = 16,
+            .nonce = input,
+            .nonce_len = AES_GCM128_NONCE_LEN,
+            .ad = NULL,
+            .ad_len = 0,
+            .data = input + AES_GCM128_NONCE_LEN,
+            .data_len = ilen - AES_GCM128_NONCE_LEN - AES_GCM128_TAG_LEN},
+        output, olen,
+        input + (ilen - AES_GCM128_TAG_LEN), AES_GCM128_TAG_LEN);
     if (rt != OPRT_OK) {
-        TY_LOGE("aes128_ecb_decode error:%d", rt);
+        TY_LOGE("mbedtls_cipher_auth_decrypt_wrapper:0x%x", rt);
         return rt;
     }
-
-    /* PKCS7 unpadding */
-    *olen = ilen - output[ilen - 1];
-    output[*olen] = 0;
     
     return rt;    
 }
@@ -287,7 +309,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
     }
 
     params[idx].key = "et";
-    params[idx++].value = "1";
+    params[idx++].value = "3";
     
     char ts_str[11];
     sprintf(ts_str, "%d", request->timestamp);
@@ -328,7 +350,7 @@ int atop_base_request(const atop_base_request_t* request, atop_base_response_t* 
 
     /* POST data buffer */
     size_t body_length = 0;
-    uint8_t* body_buffer = system_malloc(POST_DATA_PREFIX + (request->datalen + AES_BLOCK_SIZE) * 2 + 1);
+    uint8_t* body_buffer = system_malloc(POST_DATA_PREFIX + (request->datalen + AES_GCM128_NONCE_LEN + AES_GCM128_TAG_LEN) * 2 + 1);
     if (NULL == body_buffer) {
         TY_LOGE("body_buffer malloc fail");
         system_free(path_buffer);
