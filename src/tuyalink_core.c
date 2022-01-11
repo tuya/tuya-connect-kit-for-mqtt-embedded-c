@@ -70,7 +70,7 @@ static int tuya_mqtt_auth_signature_calculate(const char* deviceId, const char* 
     uint32_t timestamp = system_timestamp();
 
     /* client ID */
-    sprintf(username, "%s|signMethod=hmacSha256,timestamp=%d,securemode=1,accessType=1", deviceId, timestamp);
+    sprintf(username, "%s|signMethod=hmacSha256,timestamp=%d,secureMode=1,accessType=1", deviceId, timestamp);
     TY_LOGD("username:%s", username);
 
     /* username */
