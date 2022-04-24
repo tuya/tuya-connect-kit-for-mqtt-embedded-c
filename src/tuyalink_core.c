@@ -703,6 +703,7 @@ int tuyalink_thing_property_report(tuya_mqtt_context_t* context, const char* dev
 		.type = THING_TYPE_PROPERTY_REPORT,
 		.device_id = (char*)device_id,
 		.data_string = (char*)data,
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -732,7 +733,7 @@ int tuyalink_thing_event_trigger(tuya_mqtt_context_t* context, const char* devic
 		.type = THING_TYPE_EVENT_TRIGGER,
 		.device_id = (char*)device_id,
 		.data_string = (char*)data,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -747,7 +748,7 @@ int tuyalink_thing_desired_get(tuya_mqtt_context_t* context, const char* device_
 		.type = THING_TYPE_PROPERTY_DESIRED_GET,
 		.device_id = (char*)device_id,
 		.data_string = (char*)data,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -762,7 +763,7 @@ int tuyalink_thing_batch_report(tuya_mqtt_context_t* context, const char* data)
 		.type = THING_TYPE_BATCH_REPORT,
 		.device_id = (char*)context->config.device_id,
 		.data_string = (char*)data,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -777,7 +778,7 @@ int tuyalink_subdevice_bind(tuya_mqtt_context_t* context, const char* data)
 		.type = THING_TYPE_DEVICE_SUB_BIND,
 		.device_id = (char*)context->config.device_id,
 		.data_string = (char*)data,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -792,7 +793,7 @@ int tuyalink_subdevice_bind_login(tuya_mqtt_context_t* context, const char* data
 		.type = THING_TYPE_DEVICE_SUB_LOGIN,
 		.device_id = (char*)context->config.device_id,
 		.data_string = (char*)data,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -807,7 +808,7 @@ int tuyalink_subdevice_bind_logout(tuya_mqtt_context_t* context, const char* dat
 		.type = THING_TYPE_DEVICE_SUB_LOGOUT,
 		.device_id = (char*)context->config.device_id,
 		.data_string = (char*)data,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -822,7 +823,7 @@ int tuyalink_subdevice_topo_add(tuya_mqtt_context_t* context, const char* data)
 		.type = THING_TYPE_DEVICE_TOPO_ADD,
 		.device_id = (char*)context->config.device_id,
 		.data_string = (char*)data,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -837,7 +838,7 @@ int tuyalink_subdevice_topo_delete(tuya_mqtt_context_t* context, const char* dat
 		.type = THING_TYPE_DEVICE_TOPO_DEL,
 		.device_id = (char*)context->config.device_id,
 		.data_string = (char*)data,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
@@ -851,7 +852,7 @@ int tuyalink_subdevice_topo_get(tuya_mqtt_context_t* context)
 	tuyalink_message_t message = {
 		.type = THING_TYPE_DEVICE_TOPO_GET,
 		.device_id = (char*)context->config.device_id,
-		.ack = true
+		.ack = false
 	};
 	return tuyalink_message_send(context, &message);
 }
