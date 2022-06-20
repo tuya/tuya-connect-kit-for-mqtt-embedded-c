@@ -108,6 +108,7 @@ int mqtt_bind_token_get(const tuya_iot_config_t* config, tuya_binding_info_t* bi
             ret = tuya_mqtt_start(&mqctx);
             if (OPRT_OK != ret) {
                 TY_LOGE("tuya mqtt connect fail:%d, retry..", ret);
+                system_sleep(2000);
                 break;
             }
             mqtt_bind_state = STATE_MQTT_BIND_CONNECTED_WAIT;
