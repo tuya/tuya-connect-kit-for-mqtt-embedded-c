@@ -800,7 +800,7 @@ int tuya_mqtt_loop(tuya_mqtt_context_t* context)
 
 int tuya_mqtt_destory(tuya_mqtt_context_t* context)
 {
-	if (context == NULL || context->is_inited != false) {
+	if (context == NULL || context->is_inited != true) {
 		return OPRT_COM_ERROR;
 	}
 
