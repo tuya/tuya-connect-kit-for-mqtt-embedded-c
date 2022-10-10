@@ -577,7 +577,7 @@ int tuya_iot_reconnect(tuya_iot_client_t *client)
 int tuya_iot_reset(tuya_iot_client_t *client)
 {
     int ret = OPRT_OK;
-    if (tuya_iot_activated(client)) {
+    if (client->state == STATE_MQTT_YIELD && tuya_iot_activated(client)) {
         ret = matop_service_client_reset(&client->matop);
     }
 
