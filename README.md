@@ -1,7 +1,7 @@
-# Tuya IoT Link SDK for Embedded C(beta)
+# Tuya Connect kit for MQTT embedded C
 ## Table of Contents
 
-- [Tuya IoT Link SDK for Embedded C(beta)](#tuya-iot-link-sdk-for-embedded-cbeta)
+- [Tuya Connect kit for MQTT embedded C](#tuya-connect-kit-for-mqtt-embedded-c)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Get started](#get-started)
@@ -29,7 +29,7 @@ sudo apt-get install make cmake libqrencode-dev
 
 ### Clone the repository
 ```sh
-git clone https://github.com/tuya/tuya-iot-link-sdk-embedded-c.git --recurse-submodules
+git clone https://github.com/tuya/tuya-connect-kit-for-mqtt-embedded-c.git --recurse-submodules
 ```
 
 ### Compile the code
