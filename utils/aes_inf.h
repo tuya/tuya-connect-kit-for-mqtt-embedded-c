@@ -126,14 +126,20 @@ OPERATE_RET aes256_cbc_encode_raw(IN const BYTE_T *data,IN const UINT_T len,\
                                   IN const BYTE_T *key,IN BYTE_T *iv,\
                                   OUT BYTE_T *ec_data);
 
-
+#define tal_aes128_ecb_encode_raw aes128_ecb_encode_raw
 OPERATE_RET aes128_ecb_encode_raw(IN const BYTE_T *data, IN const UINT_T len,\
                                   OUT BYTE_T *ec_data,IN const BYTE_T *key);
+
+#define tal_aes128_ecb_decode_raw aes128_ecb_decode_raw
 OPERATE_RET aes128_ecb_decode_raw(IN const BYTE_T *data, IN const UINT_T len,\
                                   OUT BYTE_T *dec_data,IN const BYTE_T *key);
+
+#define tal_aes128_cbc_encode_raw aes128_cbc_encode_raw
 OPERATE_RET aes128_cbc_encode_raw(IN const BYTE_T *data,IN const UINT_T len,\
                                   IN const BYTE_T *key,IN BYTE_T *iv,\
                                   OUT BYTE_T *ec_data);
+
+#define tal_aes128_cbc_decode_raw aes128_cbc_decode_raw
 OPERATE_RET aes128_cbc_decode_raw(IN const BYTE_T *data,IN const UINT_T len,\
                                   IN const BYTE_T *key,IN BYTE_T *iv,\
                                   OUT BYTE_T *dec_data);

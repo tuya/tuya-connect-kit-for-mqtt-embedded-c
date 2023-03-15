@@ -6,6 +6,7 @@ add_library( platform_port STATIC
                "network_wrapper.c"
                "system_wrapper.c"
                "storage_wrapper.c"
+               "ble_wrapper.c"
                ${MBEDTLS_SOURCE}
                )
 
