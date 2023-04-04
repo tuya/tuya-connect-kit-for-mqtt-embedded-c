@@ -18,6 +18,8 @@ set( LINK_SDK_SOURCES
      ${CMAKE_CURRENT_LIST_DIR}/src/matop_service.c
      ${CMAKE_CURRENT_LIST_DIR}/src/file_download.c
      ${CMAKE_CURRENT_LIST_DIR}/src/tuya_ota.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/tuya_wifi_provisioning.c
+     ${CMAKE_CURRENT_LIST_DIR}/src/tuya_ble_service.c
 )
 
 # Public Include directories.

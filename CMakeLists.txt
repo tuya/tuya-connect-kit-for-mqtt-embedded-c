@@ -8,7 +8,7 @@ project( TuyaIoTLinkSdkEmbeddedC
 set_property( GLOBAL PROPERTY USE_FOLDERS ON )
 
 # Use C90.
-set( CMAKE_C_STANDARD 90 )
+set( CMAKE_C_STANDARD 99 )
 set( CMAKE_C_STANDARD_REQUIRED ON )
 
 # For debug
@@ -17,6 +17,7 @@ add_compile_options( -g )
 # Set Compiler
 # set(CMAKE_C_COMPILER arm-linux-androideabi-gcc)
 # set(CMAKE_CXX_COMPILER arm-linux-androideabi-g++)
+add_definitions(-DLITTLE_ENDIAN=1)
 
 # Do not allow in-source build.
 if( ${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR} )
