@@ -1021,6 +1021,11 @@ int ble_service_loop(void)
                                                         TKL_BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION));
                 sg_ble_service_params->conn_hdl = TKL_BLE_GATT_INVALID_HANDLE;
             }
+
+            /* close timer */
+            if (MultiTimerActivated(&sg_ble_service_params->timer_hdl)) {
+                MultiTimerStop(&sg_ble_service_params->timer_hdl);
+            }
         break;
         default : break;
     }
