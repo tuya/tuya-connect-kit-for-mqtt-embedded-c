@@ -554,6 +554,7 @@ static int ble_recv_cmd_process(tuya_ble_frame_plain_s *recv_frame, tuya_ble_fra
     uint8_t iv[FRAME_IV_SIZE] = {0};
     tuya_ble_frame_s *rsp_frame = NULL;
     uint8_t encrypt_mode = 0;
+    tuya_ble_frame_plain_s *plaintext = NULL;
 
     uint8_t rsp_data[255] = {0};
     uint16_t rsp_data_len = 0;
@@ -603,7 +604,7 @@ static int ble_recv_cmd_process(tuya_ble_frame_plain_s *recv_frame, tuya_ble_fra
         plaintext_size += align - aligned_num ;
     }
     /* malloc plaintext */
-    tuya_ble_frame_plain_s *plaintext = system_malloc(plaintext_size);
+    plaintext = system_malloc(plaintext_size);
     TUYA_CHECK_NULL_GOTO(plaintext, __ERR);
     memset(plaintext, 0, plaintext_size);
 
