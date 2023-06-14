@@ -179,7 +179,11 @@ static void get_random(uint8_t *random, uint16_t random_size)
 
 static void ble_msg_queue_insert(tuya_ble_service_status_e cmd, uint32_t len, uint8_t *data)
 {
-    struct ble_msg_node *node = system_malloc(sizeof(struct ble_msg_node)+len);
+    struct ble_msg_node *node = NULL;
+
+    TUYA_CHECK_NULL_GOTO(sg_ble_service_params, __EXIT);
+
+    node = system_malloc(sizeof(struct ble_msg_node)+len);
     TUYA_CHECK_NULL_GOTO(node, __EXIT);
     memset(node, 0, sizeof(struct ble_msg_node)+len);
 
