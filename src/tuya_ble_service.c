@@ -179,7 +179,11 @@ static void get_random(uint8_t *random, uint16_t random_size)
 
 static void ble_msg_queue_insert(tuya_ble_service_status_e cmd, uint32_t len, uint8_t *data)
 {
-    struct ble_msg_node *node = system_malloc(sizeof(struct ble_msg_node)+len);
+    struct ble_msg_node *node = NULL;
+
+    TUYA_CHECK_NULL_GOTO(sg_ble_service_params, __EXIT);
+
+    node = system_malloc(sizeof(struct ble_msg_node)+len);
     TUYA_CHECK_NULL_GOTO(node, __EXIT);
     memset(node, 0, sizeof(struct ble_msg_node)+len);
 
@@ -550,6 +554,7 @@ static int ble_recv_cmd_process(tuya_ble_frame_plain_s *recv_frame, tuya_ble_fra
     uint8_t iv[FRAME_IV_SIZE] = {0};
     tuya_ble_frame_s *rsp_frame = NULL;
     uint8_t encrypt_mode = 0;
+    tuya_ble_frame_plain_s *plaintext = NULL;
 
     uint8_t rsp_data[255] = {0};
     uint16_t rsp_data_len = 0;
@@ -599,7 +604,7 @@ static int ble_recv_cmd_process(tuya_ble_frame_plain_s *recv_frame, tuya_ble_fra
         plaintext_size += align - aligned_num ;
     }
     /* malloc plaintext */
-    tuya_ble_frame_plain_s *plaintext = system_malloc(plaintext_size);
+    plaintext = system_malloc(plaintext_size);
     TUYA_CHECK_NULL_GOTO(plaintext, __ERR);
     memset(plaintext, 0, plaintext_size);
 
@@ -1015,6 +1020,11 @@ int ble_service_loop(void)
                 TUYA_CALL_ERR_LOG(tkl_ble_gap_disconnect(sg_ble_service_params->conn_hdl, \
                                                         TKL_BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION));
                 sg_ble_service_params->conn_hdl = TKL_BLE_GATT_INVALID_HANDLE;
+            }
+
+            /* close timer */
+            if (MultiTimerActivated(&sg_ble_service_params->timer_hdl)) {
+                MultiTimerStop(&sg_ble_service_params->timer_hdl);
             }
         break;
         default : break;
