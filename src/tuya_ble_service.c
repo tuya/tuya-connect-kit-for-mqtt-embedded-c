@@ -241,9 +241,9 @@ static int ble_adv_data_set(tuya_ble_service_params_s *dev_info, TKL_BLE_DATA_T 
     p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x0C; segment_length++;
     // flag
     if (20 == strlen(dev_info->uuid)) {
-        p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x09; segment_length++;
+        p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x11; segment_length++;
     } else {
-        p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x00; segment_length++;
+        p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x10; segment_length++;
     }
 
 
@@ -976,6 +976,7 @@ int ble_service_loop(void)
         case (BLE_SVC_STATUS_START) :
             /* start adv */
             TUYA_CALL_ERR_RETURN(ble_service_adv_start());
+            sg_ble_service_params->key_mask = 0;
         break;
         case (BLE_SVC_STATUS_CONNECT) :
             sg_ble_service_params->conn_hdl = first_node->data[0] | first_node->data[1]<<8;
