@@ -976,6 +976,7 @@ int ble_service_loop(void)
         case (BLE_SVC_STATUS_START) :
             /* start adv */
             TUYA_CALL_ERR_RETURN(ble_service_adv_start());
+            sg_ble_service_params->key_mask = 0;
         break;
         case (BLE_SVC_STATUS_CONNECT) :
             sg_ble_service_params->conn_hdl = first_node->data[0] | first_node->data[1]<<8;
