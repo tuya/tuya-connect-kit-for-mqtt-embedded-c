@@ -241,9 +241,9 @@ static int ble_adv_data_set(tuya_ble_service_params_s *dev_info, TKL_BLE_DATA_T 
     p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x0C; segment_length++;
     // flag
     if (20 == strlen(dev_info->uuid)) {
-        p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x09; segment_length++;
+        p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x11; segment_length++;
     } else {
-        p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x00; segment_length++;
+        p_scan_rsp->p_data[p_scan_rsp->length + segment_length] = 0x10; segment_length++;
     }
 
 
